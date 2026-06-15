@@ -9,7 +9,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 @Getter
 @MappedSuperclass
-public abstract class BaseTimeEntity {
+public abstract class BaseEntity {
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -19,3 +19,4 @@ public abstract class BaseTimeEntity {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 }
+
