@@ -7,8 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface FarmRepository extends JpaRepository<Farm, Long> {
 
-    List<Farm> findAllByOwnerId(Long ownerId);
+    List<Farm> findAllByMemberId(Long memberId);
 
-    Optional<Farm> findByIdAndOwnerId(Long id, Long ownerId);
+    Optional<Farm> findByIdAndMemberId(Long id, Long memberId);
 }
-

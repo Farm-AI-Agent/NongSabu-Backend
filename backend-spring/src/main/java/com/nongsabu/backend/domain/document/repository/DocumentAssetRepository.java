@@ -6,6 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface DocumentAssetRepository extends JpaRepository<DocumentAsset, Long> {
 
-    List<DocumentAsset> findAllByUploadedById(Long uploadedById);
+    List<DocumentAsset> findAllByMemberId(Long memberId);
 }
-

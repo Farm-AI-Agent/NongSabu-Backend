@@ -11,8 +11,8 @@ import com.nongsabu.backend.domain.image.entity.ImageAnalysisResult;
 import com.nongsabu.backend.domain.image.entity.UploadedImage;
 import com.nongsabu.backend.domain.image.repository.ImageAnalysisResultRepository;
 import com.nongsabu.backend.domain.image.repository.UploadedImageRepository;
-import com.nongsabu.backend.domain.user.entity.User;
-import com.nongsabu.backend.domain.user.service.UserService;
+import com.nongsabu.backend.domain.member.entity.Member;
+import com.nongsabu.backend.domain.member.service.MemberService;
 import com.nongsabu.backend.infra.ai.FastApiAnalysisClient;
 import com.nongsabu.backend.infra.ai.dto.AiAnalysisResponse;
 import com.nongsabu.backend.infra.storage.LocalStorageService;
@@ -30,18 +30,18 @@ public class ImageAnalysisService {
     private final UploadedImageRepository uploadedImageRepository;
     private final ImageAnalysisResultRepository imageAnalysisResultRepository;
     private final FarmService farmService;
-    private final UserService userService;
+    private final MemberService memberService;
     private final LocalStorageService localStorageService;
     private final FastApiAnalysisClient fastApiAnalysisClient;
     private final AnalysisProgressBroker analysisProgressBroker;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Transactional
-    public AnalysisResponse uploadAndAnalyze(Long userId, Long farmId, MultipartFile file) {
-        Farm farm = farmService.getOwnedFarm(userId, farmId);
-        User user = userService.getUser(userId);
+    public AnalysisResponse uploadAndAnalyze(Long memberId, Long farmId, MultipartFile file) {
+        Farm farm = farmService.getOwnedFarm(memberId, farmId);
+        Member member = memberService.getMember(memberId);
 
-        UploadedImage image = createImageEntity(farm, user, file);
+        UploadedImage image = createImageEntity(farm, member, file);
         analysisProgressBroker.publish(image.getId(), AnalysisStatus.PENDING.name(), "이미지 업로드가 완료되었습니다.");
 
         try {
@@ -73,19 +73,19 @@ public class ImageAnalysisService {
     }
 
     @Transactional(readOnly = true)
-    public AnalysisResponse getAnalysis(Long userId, Long imageId) {
-        UploadedImage image = uploadedImageRepository.findByIdAndUploadedById(imageId, userId)
+    public AnalysisResponse getAnalysis(Long memberId, Long imageId) {
+        UploadedImage image = uploadedImageRepository.findByIdAndMemberId(imageId, memberId)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "이미지를 찾을 수 없습니다."));
         ImageAnalysisResult result = imageAnalysisResultRepository.findByUploadedImageId(imageId).orElse(null);
         return AnalysisResponse.of(image, result);
     }
 
-    private UploadedImage createImageEntity(Farm farm, User user, MultipartFile file) {
+    private UploadedImage createImageEntity(Farm farm, Member member, MultipartFile file) {
         try {
             String storedPath = localStorageService.store("images", file);
             return uploadedImageRepository.save(UploadedImage.builder()
                     .farm(farm)
-                    .uploadedBy(user)
+                    .member(member)
                     .originalFilename(file.getOriginalFilename() == null ? "unknown" : file.getOriginalFilename())
                     .storagePath(storedPath)
                     .contentType(file.getContentType())
@@ -105,4 +105,3 @@ public class ImageAnalysisService {
         }
     }
 }
-

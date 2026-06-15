@@ -1,7 +1,7 @@
 package com.nongsabu.backend.domain.farm.entity;
 
 import com.nongsabu.backend.common.entity.BaseTimeEntity;
-import com.nongsabu.backend.domain.user.entity.User;
+import com.nongsabu.backend.domain.member.entity.Member;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -30,8 +30,8 @@ public class Farm extends BaseTimeEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "owner_id")
-    private User owner;
+    @JoinColumn(name = "member_id")
+    private Member member;
 
     @Column(nullable = false, length = 100)
     private String name;
@@ -56,4 +56,3 @@ public class Farm extends BaseTimeEntity {
         this.notes = notes;
     }
 }
-

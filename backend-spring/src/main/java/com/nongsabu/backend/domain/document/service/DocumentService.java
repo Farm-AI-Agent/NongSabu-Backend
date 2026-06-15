@@ -10,8 +10,8 @@ import com.nongsabu.backend.domain.document.entity.DocumentChunk;
 import com.nongsabu.backend.domain.document.entity.DocumentParsingStatus;
 import com.nongsabu.backend.domain.document.repository.DocumentAssetRepository;
 import com.nongsabu.backend.domain.document.repository.DocumentChunkRepository;
-import com.nongsabu.backend.domain.user.entity.User;
-import com.nongsabu.backend.domain.user.service.UserService;
+import com.nongsabu.backend.domain.member.entity.Member;
+import com.nongsabu.backend.domain.member.service.MemberService;
 import com.nongsabu.backend.infra.storage.LocalStorageService;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -29,14 +29,14 @@ public class DocumentService {
 
     private final DocumentAssetRepository documentAssetRepository;
     private final DocumentChunkRepository documentChunkRepository;
-    private final UserService userService;
+    private final MemberService memberService;
     private final LocalStorageService localStorageService;
     private final EmbeddingService embeddingService;
 
     @Transactional
-    public DocumentUploadResponse upload(Long userId, MultipartFile file) {
-        User user = userService.getUser(userId);
-        DocumentAsset asset = createAsset(user, file);
+    public DocumentUploadResponse upload(Long memberId, MultipartFile file) {
+        Member member = memberService.getMember(memberId);
+        DocumentAsset asset = createAsset(member, file);
         try {
             String parsedText = parse(file);
             List<String> chunks = chunk(parsedText, 400, 80);
@@ -58,8 +58,8 @@ public class DocumentService {
     }
 
     @Transactional(readOnly = true)
-    public List<DocumentSummaryResponse> getDocuments(Long userId) {
-        return documentAssetRepository.findAllByUploadedById(userId).stream()
+    public List<DocumentSummaryResponse> getDocuments(Long memberId) {
+        return documentAssetRepository.findAllByMemberId(memberId).stream()
                 .map(DocumentSummaryResponse::from)
                 .toList();
     }
@@ -80,11 +80,11 @@ public class DocumentService {
                 .toList();
     }
 
-    private DocumentAsset createAsset(User user, MultipartFile file) {
+    private DocumentAsset createAsset(Member member, MultipartFile file) {
         try {
             String storedPath = localStorageService.store("documents", file);
             return documentAssetRepository.save(DocumentAsset.builder()
-                    .uploadedBy(user)
+                    .member(member)
                     .originalFilename(file.getOriginalFilename() == null ? "unknown" : file.getOriginalFilename())
                     .storagePath(storedPath)
                     .contentType(file.getContentType())
@@ -118,4 +118,3 @@ public class DocumentService {
         return chunks;
     }
 }
-
