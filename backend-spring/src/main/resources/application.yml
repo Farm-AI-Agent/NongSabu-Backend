@@ -19,7 +19,6 @@ spring:
     hibernate:
       ddl-auto: update
     open-in-view: false
-    defer-datasource-initialization: true
     properties:
       hibernate:
         format_sql: true
@@ -43,7 +42,7 @@ springdoc:
 
 app:
   jwt:
-    secret: ${JWT_SECRET:replace-this-with-long-secret}
+    secret: ${JWT_SECRET:replace-this-with-long-secret-for-local-development-please-change}
     access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:3600000}
   ai-server:
     base-url: ${AI_SERVER_BASE_URL:http://localhost:8000}
