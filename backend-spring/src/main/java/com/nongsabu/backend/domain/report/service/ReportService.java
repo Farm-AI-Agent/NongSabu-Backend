@@ -1,8 +1,7 @@
 package com.nongsabu.backend.domain.report.service;
 
-import java.util.List;
 import com.nongsabu.backend.common.exception.BusinessException;
-import com.nongsabu.backend.domain.document.service.DocumentService;
+import com.nongsabu.backend.domain.document.service.RagService;
 import com.nongsabu.backend.domain.image.entity.ImageAnalysisResult;
 import com.nongsabu.backend.domain.image.entity.UploadedImage;
 import com.nongsabu.backend.domain.image.repository.ImageAnalysisResultRepository;
@@ -12,6 +11,7 @@ import com.nongsabu.backend.domain.report.entity.AnalysisReport;
 import com.nongsabu.backend.domain.report.entity.ReportStatus;
 import com.nongsabu.backend.domain.report.repository.ReportAnalysisReportRepository;
 import com.nongsabu.backend.infra.external.KamisClient;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,7 +24,7 @@ public class ReportService {
     private final UploadedImageRepository uploadedImageRepository;
     private final ImageAnalysisResultRepository imageAnalysisResultRepository;
     private final ReportAnalysisReportRepository analysisReportRepository;
-    private final DocumentService documentService;
+    private final RagService ragService;
     private final KamisClient kamisClient;
 
     @Transactional
@@ -34,9 +34,14 @@ public class ReportService {
         ImageAnalysisResult result = imageAnalysisResultRepository.findByUploadedImageId(imageId)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "분석 결과를 찾을 수 없습니다."));
 
-        List<String> ragContextList = documentService.getContextSnippets(result.getDiseaseName() + " " + result.getSummary(), 3);
+        List<String> ragContextList = ragService.getContextSnippets(
+                memberId,
+                result.getDiseaseName() + " " + result.getSummary(),
+                3
+        );
         String ragContext = String.join("\n---\n", ragContextList);
-        String marketContext = kamisClient.getMarketSnapshot(image.getFarm().getCropSummary() == null ? "작물" : image.getFarm().getCropSummary());
+        String cropSummary = image.getFarm().getCropSummary();
+        String marketContext = kamisClient.getMarketSnapshot(cropSummary == null ? "작물" : cropSummary);
         String reportText = buildReport(result, ragContext, marketContext);
 
         AnalysisReport report = analysisReportRepository.findByUploadedImageId(imageId)

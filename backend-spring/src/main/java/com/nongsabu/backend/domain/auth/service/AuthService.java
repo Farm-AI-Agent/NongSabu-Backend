@@ -11,9 +11,9 @@ import com.nongsabu.backend.domain.member.entity.MemberRole;
 import com.nongsabu.backend.domain.member.repository.MemberRepository;
 import com.nongsabu.backend.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Service
 @RequiredArgsConstructor
@@ -55,4 +55,3 @@ public class AuthService {
         );
     }
 }
-
