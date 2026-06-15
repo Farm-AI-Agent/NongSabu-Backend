@@ -38,6 +38,10 @@ public class JwtTokenProvider {
         return getClaims(token).getSubject();
     }
 
+    public long getExpirationSeconds() {
+        return expirationMs / 1000;
+    }
+
     public boolean validate(String token) {
         try {
             getClaims(token);

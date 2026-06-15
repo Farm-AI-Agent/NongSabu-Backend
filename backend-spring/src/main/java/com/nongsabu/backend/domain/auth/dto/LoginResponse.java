@@ -1,8 +1,9 @@
 package com.nongsabu.backend.domain.auth.dto;
 
-public record TokenResponse(
+public record LoginResponse(
         String accessToken,
-        String tokenType
+        String tokenType,
+        long expiresIn
 ) {
 }
 

@@ -14,10 +14,7 @@ public record SignupRequest(
         String password,
 
         @NotBlank(message = "이름은 필수입니다.")
-        String fullName,
-
-        String phoneNumber,
-        String region
+        String name
 ) {
 }
 
