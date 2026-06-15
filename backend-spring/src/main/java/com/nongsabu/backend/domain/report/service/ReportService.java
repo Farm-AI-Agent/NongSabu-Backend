@@ -10,7 +10,7 @@ import com.nongsabu.backend.domain.image.repository.UploadedImageRepository;
 import com.nongsabu.backend.domain.report.dto.AnalysisReportResponse;
 import com.nongsabu.backend.domain.report.entity.AnalysisReport;
 import com.nongsabu.backend.domain.report.entity.ReportStatus;
-import com.nongsabu.backend.domain.report.repository.AnalysisReportRepository;
+import com.nongsabu.backend.domain.report.repository.ReportAnalysisReportRepository;
 import com.nongsabu.backend.infra.external.KamisClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,7 +23,7 @@ public class ReportService {
 
     private final UploadedImageRepository uploadedImageRepository;
     private final ImageAnalysisResultRepository imageAnalysisResultRepository;
-    private final AnalysisReportRepository analysisReportRepository;
+    private final ReportAnalysisReportRepository analysisReportRepository;
     private final DocumentService documentService;
     private final KamisClient kamisClient;
 

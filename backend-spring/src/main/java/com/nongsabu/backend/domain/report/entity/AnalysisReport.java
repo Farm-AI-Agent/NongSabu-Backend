@@ -21,7 +21,7 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Builder
-@Entity
+@Entity(name = "reportAnalysisReport")
 @Table(name = "analysis_reports")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor

@@ -7,7 +7,7 @@ import com.nongsabu.backend.domain.document.dto.DocumentUploadResponse;
 import com.nongsabu.backend.domain.document.dto.RagSearchRequest;
 import com.nongsabu.backend.domain.document.dto.RagSearchResponse;
 import com.nongsabu.backend.domain.document.service.DocumentService;
-import com.nongsabu.backend.security.UserPrincipal;
+import com.nongsabu.backend.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,14 +27,14 @@ public class DocumentController {
 
     @PostMapping("/api/v1/documents")
     public ApiResponse<DocumentUploadResponse> upload(
-            @AuthenticationPrincipal UserPrincipal principal,
+            @AuthenticationPrincipal CustomUserDetails principal,
             @RequestParam MultipartFile file
     ) {
         return ApiResponse.ok("문서 업로드 및 인덱싱이 완료되었습니다.", documentService.upload(principal.id(), file));
     }
 
     @GetMapping("/api/v1/documents")
-    public ApiResponse<List<DocumentSummaryResponse>> getDocuments(@AuthenticationPrincipal UserPrincipal principal) {
+    public ApiResponse<List<DocumentSummaryResponse>> getDocuments(@AuthenticationPrincipal CustomUserDetails principal) {
         return ApiResponse.ok("문서 목록 조회에 성공했습니다.", documentService.getDocuments(principal.id()));
     }
 
@@ -43,4 +43,3 @@ public class DocumentController {
         return ApiResponse.ok("RAG 검색에 성공했습니다.", documentService.search(request.query(), request.topK()));
     }
 }
-

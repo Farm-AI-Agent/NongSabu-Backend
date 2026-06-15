@@ -6,7 +6,7 @@ import com.nongsabu.backend.domain.crop.dto.CropResponse;
 import com.nongsabu.backend.domain.crop.dto.FarmCropRequest;
 import com.nongsabu.backend.domain.crop.dto.FarmCropResponse;
 import com.nongsabu.backend.domain.crop.service.CropService;
-import com.nongsabu.backend.security.UserPrincipal;
+import com.nongsabu.backend.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,7 +30,7 @@ public class CropController {
 
     @PostMapping("/api/v1/farms/{farmId}/crops")
     public ApiResponse<FarmCropResponse> addFarmCrop(
-            @AuthenticationPrincipal UserPrincipal principal,
+            @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable Long farmId,
             @Valid @RequestBody FarmCropRequest request
     ) {

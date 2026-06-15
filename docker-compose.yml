@@ -35,7 +35,7 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-farm_user}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-farm_password}
       AI_SERVER_BASE_URL: ${AI_SERVER_BASE_URL:-http://ai-server:8000}
-      JWT_SECRET: ${JWT_SECRET:-replace-this-with-long-secret}
+      JWT_SECRET: ${JWT_SECRET:-replace-this-with-long-secret-for-local-development-please-change}
       JWT_ACCESS_TOKEN_EXPIRATION: ${JWT_ACCESS_TOKEN_EXPIRATION:-3600000}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-replace-me}
       KAMIS_API_KEY: ${KAMIS_API_KEY:-replace-me}
