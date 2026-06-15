@@ -1,7 +1,7 @@
 package com.nongsabu.backend.domain.document.entity;
 
 import com.nongsabu.backend.common.entity.BaseTimeEntity;
-import com.nongsabu.backend.domain.user.entity.User;
+import com.nongsabu.backend.domain.member.entity.Member;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -32,8 +32,8 @@ public class DocumentAsset extends BaseTimeEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "uploaded_by")
-    private User uploadedBy;
+    @JoinColumn(name = "member_id")
+    private Member member;
 
     @Column(nullable = false, length = 255)
     private String originalFilename;
@@ -55,4 +55,3 @@ public class DocumentAsset extends BaseTimeEntity {
         this.parsingStatus = parsingStatus;
     }
 }
-

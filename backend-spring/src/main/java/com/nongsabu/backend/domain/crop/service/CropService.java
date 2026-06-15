@@ -29,9 +29,16 @@ public class CropService {
         return cropRepository.findAll().stream().map(CropResponse::from).toList();
     }
 
+    @Transactional(readOnly = true)
+    public CropResponse getCrop(Long cropId) {
+        Crop crop = cropRepository.findById(cropId)
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "작물을 찾을 수 없습니다."));
+        return CropResponse.from(crop);
+    }
+
     @Transactional
-    public FarmCropResponse registerFarmCrop(Long userId, Long farmId, FarmCropRequest request) {
-        Farm farm = farmService.getOwnedFarm(userId, farmId);
+    public FarmCropResponse registerFarmCrop(Long memberId, Long farmId, FarmCropRequest request) {
+        Farm farm = farmService.getOwnedFarm(memberId, farmId);
         Crop crop = cropRepository.findById(request.cropId())
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "작물을 찾을 수 없습니다."));
 
@@ -47,4 +54,3 @@ public class CropService {
         return FarmCropResponse.from(farmCrop);
     }
 }
-

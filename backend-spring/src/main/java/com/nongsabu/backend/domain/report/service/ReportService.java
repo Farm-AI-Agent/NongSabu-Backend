@@ -28,8 +28,8 @@ public class ReportService {
     private final KamisClient kamisClient;
 
     @Transactional
-    public AnalysisReportResponse generate(Long userId, Long imageId) {
-        UploadedImage image = uploadedImageRepository.findByIdAndUploadedById(imageId, userId)
+    public AnalysisReportResponse generate(Long memberId, Long imageId) {
+        UploadedImage image = uploadedImageRepository.findByIdAndMemberId(imageId, memberId)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "이미지를 찾을 수 없습니다."));
         ImageAnalysisResult result = imageAnalysisResultRepository.findByUploadedImageId(imageId)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "분석 결과를 찾을 수 없습니다."));

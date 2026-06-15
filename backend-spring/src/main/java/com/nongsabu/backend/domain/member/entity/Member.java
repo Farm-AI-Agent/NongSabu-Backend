@@ -40,5 +40,8 @@ public class Member extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private MemberRole role;
-}
 
+    public void updateName(String name) {
+        this.name = name;
+    }
+}

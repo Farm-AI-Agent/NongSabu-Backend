@@ -6,6 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UploadedImageRepository extends JpaRepository<UploadedImage, Long> {
 
-    Optional<UploadedImage> findByIdAndUploadedById(Long id, Long uploadedById);
+    Optional<UploadedImage> findByIdAndMemberId(Long id, Long memberId);
 }
-
