@@ -47,5 +47,11 @@ public class FarmProfile extends BaseEntity {
 
     @Column(name = "main_crop", length = 100)
     private String mainCrop;
-}
 
+    public void update(String region, ExperienceLevel experienceLevel, String farmSize, String mainCrop) {
+        this.region = region;
+        this.experienceLevel = experienceLevel;
+        this.farmSize = farmSize;
+        this.mainCrop = mainCrop;
+    }
+}
