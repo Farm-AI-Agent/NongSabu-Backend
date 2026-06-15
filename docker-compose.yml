@@ -1,51 +1,49 @@
 services:
-  db:
+  postgres:
     image: pgvector/pgvector:pg16
-    container_name: nongsabu-db
+    container_name: farm-ai-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-nongsabu}
-      POSTGRES_USER: ${POSTGRES_USER:-nongsabu}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nongsabu1234}
+      POSTGRES_DB: ${POSTGRES_DB:-farm_ai}
+      POSTGRES_USER: ${POSTGRES_USER:-farm_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-farm_password}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend-spring/db/init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nongsabu} -d ${POSTGRES_DB:-nongsabu}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-farm_user} -d ${POSTGRES_DB:-farm_ai}"]
       interval: 10s
       timeout: 5s
       retries: 10
 
   ai-server:
-    build:
-      context: ./ai-server
-    container_name: nongsabu-ai-server
+    build: ./ai-server
+    container_name: farm-ai-ai-server
     restart: unless-stopped
-    environment:
-      AI_SERVER_PORT: ${AI_SERVER_PORT:-8000}
     ports:
-      - "${AI_SERVER_PORT:-8000}:8000"
+      - "8000:8000"
 
   backend-spring:
-    build:
-      context: ./backend-spring
-    container_name: nongsabu-backend-spring
+    build: ./backend-spring
+    container_name: farm-ai-backend-spring
     restart: unless-stopped
     environment:
-      SPRING_PORT: ${SPRING_PORT:-8080}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-nongsabu}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-nongsabu}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-nongsabu1234}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      SPRING_PORT: 8080
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-farm_ai}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-farm_user}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-farm_password}
       AI_SERVER_BASE_URL: ${AI_SERVER_BASE_URL:-http://ai-server:8000}
-      APP_JWT_SECRET: ${JWT_SECRET:-change-this-secret-for-local-dev}
-      APP_JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
-      APP_EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-8}
+      JWT_SECRET: ${JWT_SECRET:-replace-this-with-long-secret}
+      JWT_ACCESS_TOKEN_EXPIRATION: ${JWT_ACCESS_TOKEN_EXPIRATION:-3600000}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-replace-me}
+      KAMIS_API_KEY: ${KAMIS_API_KEY:-replace-me}
+      KAMIS_CUSTOMER_ID: ${KAMIS_CUSTOMER_ID:-replace-me}
     ports:
-      - "${SPRING_PORT:-8080}:8080"
+      - "8080:8080"
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
       ai-server:
         condition: service_started
