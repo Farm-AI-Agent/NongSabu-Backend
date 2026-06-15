@@ -7,7 +7,7 @@ import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class DocumentChunkVectorRepositoryImpl implements DocumentChunkVectorRepositoryCustom {
+public class DocumentChunkRepositoryImpl implements DocumentChunkVectorRepositoryCustom {
 
     @PersistenceContext
     private EntityManager entityManager;
