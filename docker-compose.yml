@@ -1,0 +1,54 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: nongsabu-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nongsabu}
+      POSTGRES_USER: ${POSTGRES_USER:-nongsabu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nongsabu1234}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend-spring/db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nongsabu} -d ${POSTGRES_DB:-nongsabu}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ai-server:
+    build:
+      context: ./ai-server
+    container_name: nongsabu-ai-server
+    restart: unless-stopped
+    environment:
+      AI_SERVER_PORT: ${AI_SERVER_PORT:-8000}
+    ports:
+      - "${AI_SERVER_PORT:-8000}:8000"
+
+  backend-spring:
+    build:
+      context: ./backend-spring
+    container_name: nongsabu-backend-spring
+    restart: unless-stopped
+    environment:
+      SPRING_PORT: ${SPRING_PORT:-8080}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-nongsabu}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-nongsabu}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-nongsabu1234}
+      AI_SERVER_BASE_URL: ${AI_SERVER_BASE_URL:-http://ai-server:8000}
+      APP_JWT_SECRET: ${JWT_SECRET:-change-this-secret-for-local-dev}
+      APP_JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      APP_EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-8}
+    ports:
+      - "${SPRING_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      ai-server:
+        condition: service_started
+
+volumes:
+  postgres_data:

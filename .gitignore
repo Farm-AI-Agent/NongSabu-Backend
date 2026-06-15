@@ -1,0 +1,14 @@
+.gradle/
+build/
+out/
+.idea/
+*.iml
+backend-spring/.gradle/
+backend-spring/build/
+backend-spring/uploads/
+ai-server/.venv/
+ai-server/__pycache__/
+ai-server/.pytest_cache/
+ai-server/uploads/
+.env
+
