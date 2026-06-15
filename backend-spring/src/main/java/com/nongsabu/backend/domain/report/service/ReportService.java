@@ -2,7 +2,7 @@ package com.nongsabu.backend.domain.report.service;
 
 import java.util.List;
 import com.nongsabu.backend.common.exception.BusinessException;
-import com.nongsabu.backend.domain.document.service.DocumentService;
+import com.nongsabu.backend.domain.document.service.RagService;
 import com.nongsabu.backend.domain.image.entity.ImageAnalysisResult;
 import com.nongsabu.backend.domain.image.entity.UploadedImage;
 import com.nongsabu.backend.domain.image.repository.ImageAnalysisResultRepository;
@@ -24,7 +24,7 @@ public class ReportService {
     private final UploadedImageRepository uploadedImageRepository;
     private final ImageAnalysisResultRepository imageAnalysisResultRepository;
     private final AnalysisReportRepository analysisReportRepository;
-    private final DocumentService documentService;
+    private final RagService ragService;
     private final KamisClient kamisClient;
 
     @Transactional
@@ -34,7 +34,11 @@ public class ReportService {
         ImageAnalysisResult result = imageAnalysisResultRepository.findByUploadedImageId(imageId)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "분석 결과를 찾을 수 없습니다."));
 
-        List<String> ragContextList = documentService.getContextSnippets(result.getDiseaseName() + " " + result.getSummary(), 3);
+        List<String> ragContextList = ragService.getContextSnippets(
+                userId,
+                result.getDiseaseName() + " " + result.getSummary(),
+                3
+        );
         String ragContext = String.join("\n---\n", ragContextList);
         String marketContext = kamisClient.getMarketSnapshot(image.getFarm().getCropSummary() == null ? "작물" : image.getFarm().getCropSummary());
         String reportText = buildReport(result, ragContext, marketContext);

@@ -39,7 +39,10 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/actuator/health",
-                                "/api/v1/auth/**"
+                                "/api/v1/auth/**",
+                                "/",
+                                "/rag-test.html",
+                                "/favicon.ico"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/crops").permitAll()
                         .anyRequest().authenticated()

@@ -41,9 +41,20 @@ services:
       AI_SERVER_BASE_URL: ${AI_SERVER_BASE_URL:-http://ai-server:8000}
       APP_JWT_SECRET: ${JWT_SECRET:-change-this-secret-for-local-dev}
       APP_JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
-      APP_EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-8}
+      APP_EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      APP_EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-1536}
+      APP_CHAT_MODEL: ${CHAT_MODEL:-gpt-4.1-mini}
+      APP_RAG_TOP_K: ${RAG_TOP_K:-4}
+      APP_RAG_SIMILARITY_THRESHOLD: ${RAG_SIMILARITY_THRESHOLD:-0.35}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-not-configured}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com}
+      APP_DOCUMENT_CHUNK_SIZE: ${DOCUMENT_CHUNK_SIZE:-1200}
+      APP_DOCUMENT_CHUNK_OVERLAP: ${DOCUMENT_CHUNK_OVERLAP:-200}
+      APP_STORAGE_UPLOAD_DIR: /app/uploads
     ports:
       - "${SPRING_PORT:-8080}:8080"
+    volumes:
+      - spring_uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -52,3 +63,4 @@ services:
 
 volumes:
   postgres_data:
+  spring_uploads:
