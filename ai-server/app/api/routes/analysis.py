@@ -1,14 +1,13 @@
 from fastapi import APIRouter, File, UploadFile
 
 from app.schemas.analysis import AnalysisResponse
-from app.services.analyzer import CropDiseaseAnalyzer
+from app.services.disease_predictor import DummyDiseasePredictor
 
 
 router = APIRouter()
-analyzer = CropDiseaseAnalyzer()
+disease_predictor = DummyDiseasePredictor()
 
 
-@router.post("/analyze", response_model=AnalysisResponse)
-async def analyze(file: UploadFile = File(...)) -> AnalysisResponse:
-    return await analyzer.analyze(file)
-
+@router.post("/disease/predict", response_model=AnalysisResponse)
+async def predict_disease(file: UploadFile = File(...)) -> AnalysisResponse:
+    return await disease_predictor.predict(file)

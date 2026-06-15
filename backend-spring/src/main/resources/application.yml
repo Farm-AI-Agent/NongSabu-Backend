@@ -2,12 +2,19 @@ server:
   port: ${SPRING_PORT:8080}
 
 spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
   application:
-    name: nongsabu-backend
+    name: farm-ai-backend
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/nongsabu}
-    username: ${SPRING_DATASOURCE_USERNAME:nongsabu}
-    password: ${SPRING_DATASOURCE_PASSWORD:nongsabu1234}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/farm_ai}
+    username: ${SPRING_DATASOURCE_USERNAME:farm_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:farm_password}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    placeholders:
+      embeddingDimension: ${APP_EMBEDDING_DIMENSION:1536}
   jpa:
     hibernate:
       ddl-auto: update
@@ -32,18 +39,22 @@ management:
 
 springdoc:
   swagger-ui:
-    path: /swagger-ui.html
+    path: /swagger-ui/index.html
 
 app:
   jwt:
-    secret: ${APP_JWT_SECRET:change-this-secret-for-local-dev}
-    expiration-ms: ${APP_JWT_EXPIRATION_MS:86400000}
+    secret: ${JWT_SECRET:replace-this-with-long-secret}
+    access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:3600000}
   ai-server:
     base-url: ${AI_SERVER_BASE_URL:http://localhost:8000}
   embedding:
-    dimension: ${APP_EMBEDDING_DIMENSION:8}
+    dimension: ${APP_EMBEDDING_DIMENSION:1536}
   storage:
     upload-dir: ${APP_STORAGE_UPLOAD_DIR:uploads}
+  external:
+    openai-api-key: ${OPENAI_API_KEY:replace-me}
+    kamis-api-key: ${KAMIS_API_KEY:replace-me}
+    kamis-customer-id: ${KAMIS_CUSTOMER_ID:replace-me}
 
 logging:
   level:

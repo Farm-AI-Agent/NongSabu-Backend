@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @Builder
 @Entity
-@Table(name = "crops")
+@Table(name = "crop")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 public class Crop extends BaseTimeEntity {
@@ -34,4 +34,3 @@ public class Crop extends BaseTimeEntity {
     @Column(length = 500)
     private String description;
 }
-
