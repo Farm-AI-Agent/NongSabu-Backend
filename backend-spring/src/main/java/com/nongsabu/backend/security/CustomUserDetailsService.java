@@ -1,10 +1,10 @@
 package com.nongsabu.backend.security;
 
 import com.nongsabu.backend.common.exception.BusinessException;
-import com.nongsabu.backend.domain.user.entity.User;
-import com.nongsabu.backend.domain.user.repository.UserRepository;
+import com.nongsabu.backend.common.exception.ErrorCode;
+import com.nongsabu.backend.domain.member.entity.Member;
+import com.nongsabu.backend.domain.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -14,27 +14,27 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
-    private final UserRepository userRepository;
+    private final MemberRepository memberRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다."));
-        return toPrincipal(user);
+        Member member = memberRepository.findByEmail(username)
+                .orElseThrow(() -> new UsernameNotFoundException("회원을 찾을 수 없습니다."));
+        return toCustomUserDetails(member);
     }
 
-    public UserPrincipal loadByUserId(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
-        return toPrincipal(user);
+    public CustomUserDetails loadByUserId(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        return toCustomUserDetails(member);
     }
 
-    private UserPrincipal toPrincipal(User user) {
-        return new UserPrincipal(
-                user.getId(),
-                user.getEmail(),
-                user.getPasswordHash(),
-                user.getRole().name()
+    private CustomUserDetails toCustomUserDetails(Member member) {
+        return new CustomUserDetails(
+                member.getId(),
+                member.getEmail(),
+                member.getPassword(),
+                member.getRole().name()
         );
     }
 }

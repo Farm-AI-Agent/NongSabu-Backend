@@ -4,7 +4,7 @@ import com.nongsabu.backend.common.api.ApiResponse;
 import com.nongsabu.backend.domain.image.dto.AnalysisResponse;
 import com.nongsabu.backend.domain.image.service.AnalysisProgressBroker;
 import com.nongsabu.backend.domain.image.service.ImageAnalysisService;
-import com.nongsabu.backend.security.UserPrincipal;
+import com.nongsabu.backend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,7 +26,7 @@ public class ImageAnalysisController {
 
     @PostMapping
     public ApiResponse<AnalysisResponse> uploadAndAnalyze(
-            @AuthenticationPrincipal UserPrincipal principal,
+            @AuthenticationPrincipal CustomUserDetails principal,
             @RequestParam Long farmId,
             @RequestParam MultipartFile file
     ) {
@@ -35,7 +35,7 @@ public class ImageAnalysisController {
 
     @GetMapping("/{imageId}")
     public ApiResponse<AnalysisResponse> getAnalysis(
-            @AuthenticationPrincipal UserPrincipal principal,
+            @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable Long imageId
     ) {
         return ApiResponse.ok("이미지 분석 결과 조회에 성공했습니다.", imageAnalysisService.getAnalysis(principal.id(), imageId));
@@ -46,4 +46,3 @@ public class ImageAnalysisController {
         return analysisProgressBroker.subscribe(imageId);
     }
 }
-
