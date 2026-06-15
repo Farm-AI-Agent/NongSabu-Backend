@@ -35,7 +35,6 @@ dependencies {
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     implementation 'org.apache.commons:commons-lang3:3.16.0'
-    // TODO: Add Spring AI BOM/starter after version compatibility is locked with Spring Boot 3.x.
 
     runtimeOnly 'org.postgresql:postgresql'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
