@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     #   False = raw 출력 → 코드에서 NMS 수행
     nms_free: bool | None = None
 
+    # 추론 디바이스: "auto"(GPU 가능하면 GPU, 아니면 CPU 폴백) | "cpu" | "cuda".
+    # GPU 사용은 onnxruntime-gpu 패키지 + CUDA 런타임이 있어야 실제로 활성화됨.
+    device: str = "auto"
+
     # ── ONNX Runtime 최적화 (CPU) ──────────────────────────
     # 0 = ORT 자동. 동시요청이 많으면 세션당 스레드를 2~4로 제한해 처리량 확보.
     intra_op_num_threads: int = Field(default=0, ge=0)

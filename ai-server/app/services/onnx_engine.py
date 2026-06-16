@@ -58,6 +58,30 @@ def _nms(boxes: np.ndarray, scores: np.ndarray, iou_threshold: float) -> list[in
     return keep
 
 
+def _select_providers(settings: Settings) -> list[str]:
+    """환경에 맞는 실행 공급자(EP) 목록을 자동 선택. GPU 가능하면 GPU, 아니면 CPU 폴백.
+
+    - device="auto"(기본): 사용 가능한 EP 중 GPU(CUDA/TensorRT)가 있으면 우선, 없으면 CPU.
+    - device="cpu": 무조건 CPU.
+    - device="cuda": CUDA 우선(없으면 CPU 폴백).
+
+    주의: GPU EP 는 `onnxruntime-gpu` 패키지 + CUDA/cuDNN 런타임이 있어야 노출된다.
+    CPU 전용 `onnxruntime` 에서는 CUDA EP 가 목록에 없으므로 자동으로 CPU 만 사용한다.
+    """
+    available = ort.get_available_providers()
+    cpu = "CPUExecutionProvider"
+    gpu_priority = ["TensorrtExecutionProvider", "CUDAExecutionProvider"]
+
+    device = getattr(settings, "device", "auto")
+    if device == "cpu":
+        return [cpu]
+
+    wanted = [p for p in gpu_priority if p in available]
+    if device == "cuda" and "CUDAExecutionProvider" in available:
+        wanted = ["CUDAExecutionProvider"]
+    return [*wanted, cpu] if wanted else [cpu]
+
+
 class OnnxYoloEngine:
     """ONNX YOLO 추론 세션 래퍼. 스레드 세이프한 run() 을 제공."""
 
@@ -70,10 +94,12 @@ class OnnxYoloEngine:
         opts.inter_op_num_threads = settings.inter_op_num_threads
 
         self.session = ort.InferenceSession(
-            model_path, sess_options=opts, providers=["CPUExecutionProvider"]
+            model_path, sess_options=opts, providers=_select_providers(settings)
         )
         self._input_name = self.session.get_inputs()[0].name
         self._size = settings.input_size
+        # 실제로 어떤 EP 가 적용됐는지 (GPU 폴백 여부 확인용)
+        self.active_providers = self.session.get_providers()
 
     def infer(self, image_rgb: np.ndarray) -> list[tuple[int, float, list[float]]]:
         """원본 RGB(HWC uint8) 이미지를 받아 (class_id, confidence, [x,y,w,h]) 목록 반환.

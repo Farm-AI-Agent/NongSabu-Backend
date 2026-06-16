@@ -15,7 +15,7 @@ from PIL import Image, UnidentifiedImageError
 
 from app.core.config import Settings
 from app.core.errors import InvalidImageError
-from app.schemas.analysis import AnalysisResponse
+from app.schemas.analysis import AnalysisResponse, Detection
 
 
 class DiseasePredictor(Protocol):
@@ -45,6 +45,17 @@ class GrapeMockDiseasePredictor:
 
     def predict_sync(self, file_bytes: bytes, filename: str | None = None) -> AnalysisResponse:
         width, height = _image_size(file_bytes)  # 잘못된 이미지면 InvalidImageError
+
+        # 사전정의 박스: 원본 좌표계로 중앙 약 40% 영역. 클라이언트가 이 좌표로 박스를 그린다.
+        bbox = [round(width * 0.3, 1), round(height * 0.3, 1), round(width * 0.4, 1), round(height * 0.4, 1)]
+        detections = [
+            Detection(
+                class_name="grape_disease",
+                label="포도 병충해(더미)",
+                confidence=0.87,
+                bbox=bbox,
+            )
+        ]
         return AnalysisResponse(
             diagnosis="Grape disease suspicion (dummy)",
             confidence=0.87,
@@ -58,6 +69,9 @@ class GrapeMockDiseasePredictor:
                 "and review grape disease guidance before applying treatment."
             ),
             model_version=f"grape-dummy-disease-predictor-v1:{len(file_bytes)}:{width}x{height}",
+            detections=detections,
+            detection_count=len(detections),
+            image_size={"width": width, "height": height},
         )
 
     def info(self) -> dict:
@@ -120,36 +134,42 @@ def build_predictor(settings: Settings) -> GrapeMockDiseasePredictor:
 #         self._engine = engine
 #         self._labels = _load_labels(settings)
 #
-#     def _label(self, class_id: int) -> tuple[str, str]:
+#     def _label(self, class_id: int) -> tuple[str, str, str]:
 #         if 0 <= class_id < len(self._labels):
 #             c = self._labels[class_id]
-#             return c.get("name_ko", f"클래스 {class_id}"), c.get("severity", "LOW")
-#         return f"클래스 {class_id}", "LOW"
+#             return c.get("name", f"class_{class_id}"), c.get("name_ko", f"클래스 {class_id}"), c.get("severity", "LOW")
+#         return f"class_{class_id}", f"클래스 {class_id}", "LOW"
 #
 #     def predict_sync(self, file_bytes: bytes, filename: str | None = None) -> AnalysisResponse:
 #         image = _decode_image_array(file_bytes)
-#         detections = []  # [(label_ko, confidence, severity), ...]
-#         for class_id, conf, _bbox in self._engine.infer(image):
-#             label_ko, severity = self._label(class_id)
-#             detections.append((label_ko, conf, severity))
-#         detections.sort(key=lambda d: d[1], reverse=True)
-#         return self._aggregate(detections)
+#         h, w = image.shape[:2]
+#         dets = []   # 클라이언트 렌더링용 Detection (bbox 포함)
+#         meta = []   # 집계용 (label_ko, conf, severity)
+#         for class_id, conf, bbox in self._engine.infer(image):   # bbox=[x,y,w,h] 원본 좌표
+#             name, label_ko, severity = self._label(class_id)
+#             dets.append(Detection(class_name=name, label=label_ko, confidence=conf, bbox=bbox))
+#             meta.append((label_ko, conf, severity))
+#         order = sorted(range(len(dets)), key=lambda i: meta[i][1], reverse=True)
+#         dets = [dets[i] for i in order]; meta = [meta[i] for i in order]
+#         return self._aggregate(dets, meta, w, h)
 #
-#     def _aggregate(self, detections) -> AnalysisResponse:
+#     def _aggregate(self, dets, meta, w, h) -> AnalysisResponse:
 #         # 탐지 0건 = 정상 (별도 클래스 아님)
-#         if not detections:
+#         if not meta:
 #             return AnalysisResponse(
 #                 diagnosis="정상", confidence=0.0, severity="LOW",
 #                 summary="포도 잎에서 병충해가 탐지되지 않았습니다(정상).",
 #                 recommended_action="", model_version=self._settings.model_version,
+#                 detections=[], detection_count=0, image_size={"width": w, "height": h},
 #             )
-#         top = detections[0]
-#         worst = max(detections, key=lambda d: _SEVERITY_RANK.get(d[2], 0))
+#         top = meta[0]
+#         worst = max(meta, key=lambda m: _SEVERITY_RANK.get(m[2], 0))
 #         return AnalysisResponse(
 #             diagnosis=top[0], confidence=top[1], severity=worst[2],
-#             summary=f"{len(detections)}건의 병충해가 탐지되었습니다(대표: {top[0]}).",
+#             summary=f"{len(meta)}건의 병충해가 탐지되었습니다(대표: {top[0]}).",
 #             recommended_action="",  # 대응문구는 Spring RAG 가 생성(팀 합의)
 #             model_version=self._settings.model_version,
+#             detections=dets, detection_count=len(dets), image_size={"width": w, "height": h},
 #         )
 #
 #     def info(self) -> dict:

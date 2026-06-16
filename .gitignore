@@ -17,4 +17,7 @@ ai-server/uploads/
 ai-server/models/
 ai-server/*.onnx
 ai-server/labels.json
+# GPU 전용 빌드(로컬 전용) — 노트북 GPU 환경에서만 사용, 커밋하지 않음
+ai-server/Dockerfile.gpu
+ai-server/.dockerignore.gpu
 .env

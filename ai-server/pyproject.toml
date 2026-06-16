@@ -15,8 +15,10 @@ dependencies = [
 ]
 
 [dependency-groups]
-# ONNX 추론용 의존성. 모델 학습/변환 완료 후 추론 코드 주석을 해제할 때 설치:
+# ONNX 추론용 의존성(CPU). 모델 학습/변환 완료 후 추론 코드 주석을 해제할 때 설치:
 #   uv sync --group inference
+# GPU 도 쓰려면: onnxruntime 대신 onnxruntime-gpu 로 교체 + CUDA/cuDNN 런타임 필요
+#   (engine 은 AI_DEVICE=auto 시 CUDA 가능하면 GPU, 아니면 CPU 로 자동 폴백)
 inference = [
     "numpy>=2.1.0",
     "onnxruntime>=1.20.0",
