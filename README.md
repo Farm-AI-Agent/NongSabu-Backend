@@ -36,7 +36,74 @@ Spring Boot 서비스 API는 `/api/v1`을 표준 prefix로 사용합니다.
 - 문서/RAG: `/api/v1/documents`, `/api/v1/rag/**`
 - 분석 리포트: `/api/v1/reports/**`
 
-이전 MVP 단계에서 사용하던 `/api/crops`, `/api/auth`, `/api/members`, `/api/farm-profiles`, `/api/user-crops` 형태의 비버전 경로는 더 이상 표준으로 사용하지 않습니다.
+## RAG 실제 검증 흐름
+
+RAG 업로드/검색/답변은 OpenAI embedding과 PostgreSQL pgvector를 사용합니다.
+
+1. `.env`에 실제 OpenAI API Key를 설정합니다.
+
+```env
+OPENAI_API_KEY=sk-...
+APP_EMBEDDING_MODEL=text-embedding-3-small
+APP_EMBEDDING_DIMENSION=1536
+```
+
+2. 서비스 실행 후 회원가입/로그인으로 JWT를 발급합니다.
+3. PDF 문서를 업로드합니다.
+
+```http
+POST /api/v1/documents
+Authorization: Bearer {token}
+Content-Type: multipart/form-data
+```
+
+4. RAG 검색을 확인합니다.
+
+```http
+POST /api/v1/rag/search
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "query": "포도 병충해 초기 대응 방법",
+  "topK": 3
+}
+```
+
+5. RAG 답변 생성을 확인합니다.
+
+```http
+POST /api/v1/rag/ask
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "question": "포도 잎에 반점이 있을 때 초보 농가가 먼저 해야 할 일은?"
+}
+```
+
+6. RAG 연결 진단을 확인합니다.
+
+```http
+GET /api/v1/rag/diagnostics
+Authorization: Bearer {token}
+```
+
+`ready=true`이면 OpenAI embedding 호출과 pgvector 검색 경로가 정상 응답한 것입니다.
+
+## LLM 리포트 생성
+
+분석 리포트는 이미지 분석 결과, RAG 문맥, 외부 시장 정보를 조합합니다.
+
+- 기본값 `APP_LLM_ENABLED=false`: 로컬 MVP 실행을 위해 규칙 기반 리포트 fallback 사용
+- `APP_LLM_ENABLED=true`: Spring AI ChatClient를 통해 실제 LLM 리포트 생성 시도
+- LLM 호출 실패 또는 빈 응답이면 규칙 기반 리포트로 fallback
+
+```env
+APP_LLM_ENABLED=true
+APP_CHAT_MODEL=gpt-4.1-mini
+OPENAI_API_KEY=sk-...
+```
 
 ## DB 마이그레이션
 

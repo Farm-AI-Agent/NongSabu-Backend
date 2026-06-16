@@ -5,6 +5,7 @@ import com.nongsabu.backend.domain.document.dto.DocumentSummaryResponse;
 import com.nongsabu.backend.domain.document.dto.DocumentUploadResponse;
 import com.nongsabu.backend.domain.document.dto.RagAnswerResponse;
 import com.nongsabu.backend.domain.document.dto.RagAskRequest;
+import com.nongsabu.backend.domain.document.dto.RagDiagnosticResponse;
 import com.nongsabu.backend.domain.document.dto.RagSearchRequest;
 import com.nongsabu.backend.domain.document.dto.RagSearchResponse;
 import com.nongsabu.backend.domain.document.service.DocumentService;
@@ -67,5 +68,13 @@ public class DocumentController {
                 "RAG 답변 생성에 성공했습니다.",
                 ragService.ask(principal.id(), request.question())
         );
+    }
+
+    @GetMapping("/api/v1/rag/diagnostics")
+    public ApiResponse<RagDiagnosticResponse> diagnose(
+            @AuthenticationPrincipal CustomUserDetails principal
+    ) {
+        RagDiagnosticResponse response = ragService.diagnose(principal.id());
+        return ApiResponse.ok(response.message(), response);
     }
 }
