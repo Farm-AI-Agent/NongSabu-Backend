@@ -38,7 +38,9 @@ Spring Boot 서비스 API는 `/api/v1`을 표준 prefix로 사용합니다.
 
 ## RAG 실제 검증 흐름
 
-RAG 업로드/검색/답변은 OpenAI embedding과 PostgreSQL pgvector를 사용합니다.
+RAG 업로드/검색은 OpenAI embedding과 PostgreSQL pgvector를 사용합니다.
+`/api/v1/rag/ask`는 `APP_LLM_ENABLED=true`일 때 LLM 답변을 생성하고,
+기본값인 `false`에서는 검색된 문서 근거를 그대로 요약해 로컬 검증이 가능하도록 동작합니다.
 
 1. `.env`에 실제 OpenAI API Key를 설정합니다.
 
@@ -46,6 +48,7 @@ RAG 업로드/검색/답변은 OpenAI embedding과 PostgreSQL pgvector를 사용
 OPENAI_API_KEY=sk-...
 APP_EMBEDDING_MODEL=text-embedding-3-small
 APP_EMBEDDING_DIMENSION=1536
+APP_LLM_ENABLED=false
 ```
 
 2. 서비스 실행 후 회원가입/로그인으로 JWT를 발급합니다.
@@ -89,7 +92,8 @@ GET /api/v1/rag/diagnostics
 Authorization: Bearer {token}
 ```
 
-`ready=true`이면 OpenAI embedding 호출과 pgvector 검색 경로가 정상 응답한 것입니다.
+`ready=true`이면 embedding 호출과 pgvector 검색 경로가 정상 응답한 것입니다.
+LLM 답변 생성까지 검증하려면 `.env`에 `APP_LLM_ENABLED=true`와 `APP_CHAT_MODEL`을 함께 설정합니다.
 
 ## LLM 리포트 생성
 
@@ -115,6 +119,7 @@ DB 스키마는 Flyway가 버전 순서대로 관리합니다. 이미 적용된 
 - `V4__add_crop_to_uploaded_images.sql`: 이미지 업로드에 작물 선택 연결 및 초기 작물 seed 확장
 - `V5__restrict_crop_seed_options.sql`: MVP 작물 선택지를 포도, 토마토, 딸기, 오이, 파프리카로 정리
 - `V6__allow_unsupported_image_analysis_status.sql`: 미지원 작물 분석 상태 `UNSUPPORTED` 허용
+- `V7__refine_erd_for_rag_and_external_logs.sql`: RAG chunk, 대표 작물 FK, 외부/API 도구 호출 로그 구조 보강
 
 ## 테스트
 
