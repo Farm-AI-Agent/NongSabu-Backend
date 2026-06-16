@@ -16,6 +16,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * Canonical storage for crop image disease prediction results.
+ */
 @Getter
 @Builder
 @Entity
@@ -49,4 +52,3 @@ public class ImageAnalysisResult extends BaseTimeEntity {
     @Column(columnDefinition = "text")
     private String rawResponse;
 }
-
