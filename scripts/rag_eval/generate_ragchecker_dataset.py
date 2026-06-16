@@ -695,13 +695,13 @@ class NongSabuClient:
 
     def register_or_login(self, email: str, password: str, full_name: str) -> None:
         self.session.post(
-            f"{self.base_url}/api/auth/signup",
+            f"{self.base_url}/api/v1/auth/signup",
             json={"email": email, "password": password, "name": full_name},
             timeout=self.timeout,
         )
 
         login_response = self.session.post(
-            f"{self.base_url}/api/auth/login",
+            f"{self.base_url}/api/v1/auth/login",
             json={"email": email, "password": password},
             timeout=self.timeout,
         )
