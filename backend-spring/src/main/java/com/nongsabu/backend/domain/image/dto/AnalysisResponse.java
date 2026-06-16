@@ -5,6 +5,8 @@ import com.nongsabu.backend.domain.image.entity.UploadedImage;
 
 public record AnalysisResponse(
         Long imageId,
+        Long cropId,
+        String cropName,
         String filename,
         String status,
         String diseaseName,
@@ -17,6 +19,8 @@ public record AnalysisResponse(
     public static AnalysisResponse of(UploadedImage image, ImageAnalysisResult result) {
         return new AnalysisResponse(
                 image.getId(),
+                image.getCrop() == null ? null : image.getCrop().getId(),
+                image.getCrop() == null ? null : image.getCrop().getName(),
                 image.getOriginalFilename(),
                 image.getAnalysisStatus().name(),
                 result == null ? null : result.getDiseaseName(),
@@ -27,4 +31,3 @@ public record AnalysisResponse(
         );
     }
 }
-

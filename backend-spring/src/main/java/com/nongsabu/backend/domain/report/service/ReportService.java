@@ -40,8 +40,7 @@ public class ReportService {
                 3
         );
         String ragContext = String.join("\n---\n", ragContextList);
-        String cropSummary = image.getFarm().getCropSummary();
-        String marketContext = kamisClient.getMarketSnapshot(cropSummary == null ? "작물" : cropSummary);
+        String marketContext = kamisClient.getMarketSnapshot(resolveCropName(image));
         String reportText = buildReport(result, ragContext, marketContext);
 
         AnalysisReport report = analysisReportRepository.findByUploadedImageId(imageId)
@@ -55,6 +54,16 @@ public class ReportService {
         report.refresh(reportText, ragContext, marketContext, ReportStatus.GENERATED);
 
         return AnalysisReportResponse.from(report);
+    }
+
+    private String resolveCropName(UploadedImage image) {
+        if (image.getCrop() != null) {
+            return image.getCrop().getName();
+        }
+        if (image.getFarm() != null && image.getFarm().getCropSummary() != null) {
+            return image.getFarm().getCropSummary();
+        }
+        return "작물";
     }
 
     private String buildReport(ImageAnalysisResult result, String ragContext, String marketContext) {

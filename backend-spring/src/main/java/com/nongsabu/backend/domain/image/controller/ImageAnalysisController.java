@@ -27,10 +27,10 @@ public class ImageAnalysisController {
     @PostMapping
     public ApiResponse<AnalysisResponse> uploadAndAnalyze(
             @AuthenticationPrincipal CustomUserDetails principal,
-            @RequestParam Long farmId,
+            @RequestParam Long cropId,
             @RequestParam MultipartFile file
     ) {
-        return ApiResponse.ok("이미지 분석이 완료되었습니다.", imageAnalysisService.uploadAndAnalyze(principal.id(), farmId, file));
+        return ApiResponse.ok("이미지 분석이 완료되었습니다.", imageAnalysisService.uploadAndAnalyze(principal.id(), cropId, file));
     }
 
     @GetMapping("/{imageId}")
