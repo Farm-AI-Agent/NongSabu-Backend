@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/user-crops")
+@RequestMapping("/api/v1/user-crops")
 @RequiredArgsConstructor
 public class UserCropController {
 

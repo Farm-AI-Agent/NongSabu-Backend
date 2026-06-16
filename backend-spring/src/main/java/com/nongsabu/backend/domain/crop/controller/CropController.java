@@ -22,19 +22,14 @@ public class CropController {
 
     private final CropService cropService;
 
-    @GetMapping("/api/crops")
-    public ApiResponse<List<CropResponse>> getApiCrops() {
-        return ApiResponse.ok(cropService.getAllCrops());
-    }
-
-    @GetMapping("/api/crops/{cropId}")
-    public ApiResponse<CropResponse> getApiCrop(@PathVariable Long cropId) {
-        return ApiResponse.ok(cropService.getCrop(cropId));
-    }
-
     @GetMapping("/api/v1/crops")
     public ApiResponse<List<CropResponse>> getCrops() {
         return ApiResponse.ok("작물 목록 조회에 성공했습니다.", cropService.getAllCrops());
+    }
+
+    @GetMapping("/api/v1/crops/{cropId}")
+    public ApiResponse<CropResponse> getCrop(@PathVariable Long cropId) {
+        return ApiResponse.ok("작물 조회에 성공했습니다.", cropService.getCrop(cropId));
     }
 
     @PostMapping("/api/v1/farms/{farmId}/crops")
@@ -43,6 +38,6 @@ public class CropController {
             @PathVariable Long farmId,
             @Valid @RequestBody FarmCropRequest request
     ) {
-        return ApiResponse.ok("농장 작물이 등록되었습니다.", cropService.registerFarmCrop(principal.id(), farmId, request));
+        return ApiResponse.ok("농장 작물을 등록했습니다.", cropService.registerFarmCrop(principal.id(), farmId, request));
     }
 }
