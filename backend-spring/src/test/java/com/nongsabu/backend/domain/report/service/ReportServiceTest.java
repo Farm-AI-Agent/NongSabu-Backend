@@ -7,10 +7,14 @@ import static com.nongsabu.backend.support.TestFixtures.uploadedImage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 import com.nongsabu.backend.common.exception.BusinessException;
 import com.nongsabu.backend.domain.document.service.RagService;
+import com.nongsabu.backend.domain.externalapilog.service.ExternalApiLogService;
 import com.nongsabu.backend.domain.image.entity.AnalysisStatus;
 import com.nongsabu.backend.domain.image.entity.UploadedImage;
 import com.nongsabu.backend.domain.image.repository.ImageAnalysisResultRepository;
@@ -50,6 +54,9 @@ class ReportServiceTest {
     @Mock
     private LlmClient llmClient;
 
+    @Mock
+    private ExternalApiLogService externalApiLogService;
+
     @InjectMocks
     private ReportService reportService;
 
@@ -84,6 +91,17 @@ class ReportServiceTest {
         assertThat(response.ragContext()).contains("manual-context-1", "manual-context-2");
         assertThat(response.externalMarketContext()).isEqualTo("market-context");
         assertThat(response.reportText()).isEqualTo("llm-generated-report");
+        verify(externalApiLogService).logKamisMarketSnapshot(1L, 300L, "grape", true, null);
+        verify(externalApiLogService).logLlmGeneration(
+                eq(1L),
+                eq(300L),
+                eq("analysis-report"),
+                any(),
+                any(),
+                eq("llm-generated-report"),
+                eq(true),
+                isNull()
+        );
     }
 
     @Test
