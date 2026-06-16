@@ -12,8 +12,10 @@ import com.nongsabu.backend.common.exception.BusinessException;
 import com.nongsabu.backend.domain.document.dto.DocumentSummaryResponse;
 import com.nongsabu.backend.domain.document.dto.DocumentUploadResponse;
 import com.nongsabu.backend.domain.document.entity.DocumentAsset;
+import com.nongsabu.backend.domain.document.entity.DocumentChunk;
 import com.nongsabu.backend.domain.document.entity.DocumentParsingStatus;
 import com.nongsabu.backend.domain.document.repository.DocumentAssetRepository;
+import com.nongsabu.backend.domain.document.repository.DocumentChunkRepository;
 import com.nongsabu.backend.domain.member.service.MemberService;
 import com.nongsabu.backend.infra.storage.LocalStorageService;
 import java.io.IOException;
@@ -35,6 +37,9 @@ class DocumentServiceTest {
 
     @Mock
     private DocumentAssetRepository documentAssetRepository;
+
+    @Mock
+    private DocumentChunkRepository documentChunkRepository;
 
     @Mock
     private MemberService memberService;
@@ -65,6 +70,7 @@ class DocumentServiceTest {
         MockMultipartFile file = pdfFile();
         DocumentAsset saved = documentAsset(10L, member, DocumentParsingStatus.UPLOADED);
         ArgumentCaptor<List<Document>> vectorDocuments = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<DocumentChunk>> documentChunks = ArgumentCaptor.forClass(List.class);
 
         given(memberService.getMember(1L)).willReturn(member);
         given(documentParser.parsePdf(file)).willReturn("manual text");
@@ -78,6 +84,10 @@ class DocumentServiceTest {
         assertThat(response.chunkCount()).isEqualTo(2);
         assertThat(response.embeddingModel()).isEqualTo("test-embedding-model");
         assertThat(response.parsingStatus()).isEqualTo(DocumentParsingStatus.PARSED.name());
+        verify(documentChunkRepository).saveAll(documentChunks.capture());
+        assertThat(documentChunks.getValue()).hasSize(2);
+        assertThat(documentChunks.getValue().get(0).getChunkIndex()).isZero();
+        assertThat(documentChunks.getValue().get(0).getContent()).isEqualTo("chunk-1");
         verify(vectorStore).add(vectorDocuments.capture());
         assertThat(vectorDocuments.getValue()).hasSize(2);
         assertThat(vectorDocuments.getValue().get(0).getMetadata())
