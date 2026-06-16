@@ -28,7 +28,8 @@ public class ImageAnalysisController {
             @RequestParam Long cropId,
             @RequestParam MultipartFile file
     ) {
-        return ApiResponse.ok("이미지 분석이 완료되었습니다.", imageAnalysisService.uploadAndAnalyze(principal.id(), cropId, file));
+        AnalysisResponse response = imageAnalysisService.uploadAndAnalyze(principal.id(), cropId, file);
+        return ApiResponse.ok(response.message(), response);
     }
 
     @GetMapping("/{imageId}")
@@ -36,7 +37,8 @@ public class ImageAnalysisController {
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable Long imageId
     ) {
-        return ApiResponse.ok("이미지 분석 결과 조회에 성공했습니다.", imageAnalysisService.getAnalysis(principal.id(), imageId));
+        AnalysisResponse response = imageAnalysisService.getAnalysis(principal.id(), imageId);
+        return ApiResponse.ok(response.message(), response);
     }
 
     @GetMapping("/{imageId}/stream")
