@@ -43,14 +43,11 @@ spring:
       embeddingDimension: ${APP_EMBEDDING_DIMENSION:1536}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     open-in-view: false
     properties:
       hibernate:
         format_sql: true
-  sql:
-    init:
-      mode: always
   servlet:
     multipart:
       max-file-size: 20MB
