@@ -3,6 +3,8 @@ package com.nongsabu.backend.domain.document.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -10,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import com.nongsabu.backend.domain.document.dto.RagAnswerResponse;
 import com.nongsabu.backend.domain.document.dto.RagDiagnosticResponse;
 import com.nongsabu.backend.domain.document.dto.RagSearchResponse;
+import com.nongsabu.backend.domain.externalapilog.service.ExternalApiLogService;
 import com.nongsabu.backend.infra.ai.llm.LlmClient;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +32,9 @@ class RagServiceTest {
 
     @Mock
     private LlmClient llmClient;
+
+    @Mock
+    private ExternalApiLogService externalApiLogService;
 
     @Test
     void searchReturnsVectorStoreResultsAsRagItems() {
@@ -62,6 +68,16 @@ class RagServiceTest {
                 argThat(prompt -> prompt.contains("포도 탄저병 대처")),
                 argThat(context -> context.contains("병든 잎과 과실"))
         );
+        verify(externalApiLogService).logLlmGeneration(
+                eq(1L),
+                isNull(),
+                eq("rag-ask"),
+                argThat(prompt -> prompt.contains("포도 탄저병 대처")),
+                argThat(context -> context.contains("병든 잎과 과실")),
+                eq("병든 잎과 과실을 제거하고 방제 이력을 기록하세요."),
+                eq(true),
+                isNull()
+        );
     }
 
     @Test
@@ -75,6 +91,7 @@ class RagServiceTest {
         assertThat(response.answer()).contains("LLM 생성이 비활성화");
         assertThat(response.answer()).contains("잎 뒷면과 과실 상태");
         verify(llmClient, never()).generate(any(), any());
+        verify(externalApiLogService, never()).logLlmGeneration(any(), any(), any(), any(), any(), any(), any(Boolean.class), any());
     }
 
     @Test
@@ -86,6 +103,7 @@ class RagServiceTest {
 
         assertThat(response.answer()).contains("관련 근거를 찾지 못했습니다");
         verify(llmClient, never()).generate(any(), any());
+        verify(externalApiLogService, never()).logLlmGeneration(any(), any(), any(), any(), any(), any(), any(Boolean.class), any());
     }
 
     @Test
@@ -102,7 +120,7 @@ class RagServiceTest {
     }
 
     private RagService ragService(boolean llmEnabled) {
-        return new RagService(vectorStore, llmClient, 3, 0.35, "test-embedding-model", llmEnabled);
+        return new RagService(vectorStore, llmClient, externalApiLogService, 3, 0.35, "test-embedding-model", llmEnabled);
     }
 
     private Document document(String content, Long documentId, int chunkIndex) {

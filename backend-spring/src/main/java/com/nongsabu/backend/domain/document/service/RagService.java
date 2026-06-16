@@ -4,6 +4,7 @@ import com.nongsabu.backend.domain.document.dto.RagAnswerResponse;
 import com.nongsabu.backend.domain.document.dto.RagDiagnosticResponse;
 import com.nongsabu.backend.domain.document.dto.RagSearchItem;
 import com.nongsabu.backend.domain.document.dto.RagSearchResponse;
+import com.nongsabu.backend.domain.externalapilog.service.ExternalApiLogService;
 import com.nongsabu.backend.infra.ai.llm.LlmClient;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
@@ -19,6 +20,7 @@ public class RagService {
 
     private final VectorStore vectorStore;
     private final LlmClient llmClient;
+    private final ExternalApiLogService externalApiLogService;
     private final int defaultTopK;
     private final double similarityThreshold;
     private final String embeddingModel;
@@ -27,6 +29,7 @@ public class RagService {
     public RagService(
             VectorStore vectorStore,
             LlmClient llmClient,
+            ExternalApiLogService externalApiLogService,
             @Value("${app.rag.top-k:4}") int topK,
             @Value("${app.rag.similarity-threshold:0.35}") double similarityThreshold,
             @Value("${app.embedding.model:text-embedding-3-small}") String embeddingModel,
@@ -34,6 +37,7 @@ public class RagService {
     ) {
         this.vectorStore = vectorStore;
         this.llmClient = llmClient;
+        this.externalApiLogService = externalApiLogService;
         this.defaultTopK = topK;
         this.similarityThreshold = similarityThreshold;
         this.embeddingModel = embeddingModel;
@@ -59,9 +63,34 @@ public class RagService {
         String context = buildContext(searchResponse.items());
 
         if (llmEnabled && StringUtils.isNotBlank(context)) {
-            String generated = llmClient.generate(buildPrompt(question), context);
-            if (StringUtils.isNotBlank(generated)) {
-                return new RagAnswerResponse(question, generated);
+            String prompt = buildPrompt(question);
+            try {
+                String generated = llmClient.generate(prompt, context);
+                boolean success = StringUtils.isNotBlank(generated);
+                externalApiLogService.logLlmGeneration(
+                        memberId,
+                        null,
+                        "rag-ask",
+                        prompt,
+                        context,
+                        generated,
+                        success,
+                        success ? null : "LLM 응답이 비어 있습니다."
+                );
+                if (success) {
+                    return new RagAnswerResponse(question, generated);
+                }
+            } catch (RuntimeException exception) {
+                externalApiLogService.logLlmGeneration(
+                        memberId,
+                        null,
+                        "rag-ask",
+                        prompt,
+                        context,
+                        null,
+                        false,
+                        exception.getMessage()
+                );
             }
         }
 
