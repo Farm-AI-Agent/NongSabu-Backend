@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NongSabu RAG Test</title>
+  <style>
+    :root {
+      --ink: #16231b;
+      --muted: #627067;
+      --line: #d8e1da;
+      --panel: #fff;
+      --accent: #276749;
+      --accent-soft: #e8f3ec;
+      --danger: #a33a32;
+      --bg: #f4f7f2;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: Arial, "Noto Sans KR", sans-serif;
+      line-height: 1.55;
+    }
+    main {
+      width: min(1080px, calc(100% - 32px));
+      margin: 32px auto 64px;
+    }
+    header { margin-bottom: 24px; }
+    h1, h2 { margin: 0; }
+    h1 { font-size: clamp(28px, 5vw, 48px); }
+    h2 { font-size: 20px; }
+    .subtitle { margin: 8px 0 0; color: var(--muted); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+    .card {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel);
+      box-shadow: 0 10px 30px rgba(31, 55, 39, 0.06);
+    }
+    form { display: grid; gap: 12px; margin-top: 16px; }
+    label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+    input, textarea, button {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font: inherit;
+    }
+    textarea { min-height: 96px; resize: vertical; }
+    button {
+      border-color: var(--accent);
+      color: #fff;
+      background: var(--accent);
+      cursor: pointer;
+      font-weight: 700;
+    }
+    button.secondary { color: var(--accent); background: var(--accent-soft); }
+    button:disabled { cursor: wait; opacity: 0.65; }
+    .status {
+      margin-top: 14px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      color: var(--muted);
+      background: #f7f9f7;
+      white-space: pre-wrap;
+    }
+    .status.error { color: var(--danger); background: #fff1ef; }
+    .result { display: grid; gap: 10px; margin-top: 14px; }
+    .chunk, .answer {
+      padding: 14px;
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      background: var(--accent-soft);
+      white-space: pre-wrap;
+    }
+    .meta { margin-bottom: 6px; color: var(--muted); font-size: 12px; }
+    @media (max-width: 760px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>NongSabu RAG Lab</h1>
+    <p class="subtitle">인증, PDF 벡터 저장, 유사도 검색, OpenAI RAG 답변을 한 화면에서 확인합니다.</p>
+  </header>
+
+  <section class="grid">
+    <article class="card">
+      <h2>1. 인증</h2>
+      <form id="authForm">
+        <label>이메일 <input id="email" type="email" value="rag-test@example.com" required></label>
+        <label>비밀번호 <input id="password" type="password" value="password123" required></label>
+        <label>이름 <input id="fullName" value="RAG Tester" required></label>
+        <button type="button" id="signupButton" class="secondary">회원가입</button>
+        <button type="submit">로그인</button>
+      </form>
+      <div id="authStatus" class="status">토큰 없음</div>
+    </article>
+
+    <article class="card">
+      <h2>2. PDF 업로드</h2>
+      <form id="uploadForm">
+        <label>PDF 파일 <input id="pdfFile" type="file" accept="application/pdf,.pdf" required></label>
+        <button type="submit">파싱하고 VectorStore에 저장</button>
+      </form>
+      <div id="uploadStatus" class="status">업로드 대기 중</div>
+    </article>
+
+    <article class="card">
+      <h2>3. 유사도 검색</h2>
+      <form id="searchForm">
+        <label>검색어 <textarea id="searchQuery" required>토마토 병해충 대처 방법</textarea></label>
+        <label>Top K <input id="topK" type="number" min="1" max="20" value="4"></label>
+        <button type="submit">관련 청크 검색</button>
+      </form>
+      <div id="searchStatus" class="status">검색 대기 중</div>
+      <div id="searchResults" class="result"></div>
+    </article>
+
+    <article class="card">
+      <h2>4. RAG 질문</h2>
+      <form id="askForm">
+        <label>질문 <textarea id="question" required>업로드한 문서를 바탕으로 핵심 관리 방법을 알려줘.</textarea></label>
+        <button type="submit">OpenAI에 질문</button>
+      </form>
+      <div id="askStatus" class="status">질문 대기 중</div>
+      <div id="answer" class="result"></div>
+    </article>
+  </section>
+</main>
+
+<script>
+  const tokenKey = "nongsabu-rag-token";
+  const authStatus = document.querySelector("#authStatus");
+
+  function token() {
+    return localStorage.getItem(tokenKey) || "";
+  }
+
+  function setStatus(element, message, error = false) {
+    element.textContent = message;
+    element.classList.toggle("error", error);
+  }
+
+  function updateAuthStatus() {
+    setStatus(authStatus, token() ? "JWT 토큰 저장됨" : "토큰 없음");
+  }
+
+  async function api(path, options = {}) {
+    const headers = new Headers(options.headers || {});
+    if (token()) headers.set("Authorization", `Bearer ${token()}`);
+    const response = await fetch(path, {...options, headers});
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || body.success === false) {
+      throw new Error(body.message || `HTTP ${response.status}`);
+    }
+    return body.data;
+  }
+
+  document.querySelector("#signupButton").addEventListener("click", async event => {
+    event.target.disabled = true;
+    try {
+      await api("/api/auth/signup", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          email: document.querySelector("#email").value,
+          password: document.querySelector("#password").value,
+          name: document.querySelector("#fullName").value
+        })
+      });
+      setStatus(authStatus, "회원가입 완료. 로그인해주세요.");
+    } catch (error) {
+      setStatus(authStatus, error.message, true);
+    } finally {
+      event.target.disabled = false;
+    }
+  });
+
+  document.querySelector("#authForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const button = event.submitter;
+    button.disabled = true;
+    try {
+      const data = await api("/api/auth/login", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          email: document.querySelector("#email").value,
+          password: document.querySelector("#password").value
+        })
+      });
+      localStorage.setItem(tokenKey, data.accessToken);
+      updateAuthStatus();
+    } catch (error) {
+      setStatus(authStatus, error.message, true);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  document.querySelector("#uploadForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const status = document.querySelector("#uploadStatus");
+    const button = event.submitter;
+    const formData = new FormData();
+    formData.append("file", document.querySelector("#pdfFile").files[0]);
+    button.disabled = true;
+    setStatus(status, "PDF 파싱 및 임베딩 중...");
+    try {
+      const data = await api("/api/v1/documents", {method: "POST", body: formData});
+      setStatus(status, `${data.filename}\n청크 ${data.chunkCount}개\n모델 ${data.embeddingModel}`);
+    } catch (error) {
+      setStatus(status, error.message, true);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  document.querySelector("#searchForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const status = document.querySelector("#searchStatus");
+    const results = document.querySelector("#searchResults");
+    const button = event.submitter;
+    button.disabled = true;
+    results.replaceChildren();
+    setStatus(status, "벡터 검색 중...");
+    try {
+      const data = await api("/api/v1/rag/search", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          query: document.querySelector("#searchQuery").value,
+          topK: Number(document.querySelector("#topK").value)
+        })
+      });
+      setStatus(status, `${data.items.length}개 청크 검색됨`);
+      data.items.forEach(item => {
+        const node = document.createElement("div");
+        node.className = "chunk";
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        meta.textContent = `${item.filename} · chunk ${item.chunkIndex} · score ${item.score ?? "-"}`;
+        node.append(meta, document.createTextNode(item.content));
+        results.appendChild(node);
+      });
+    } catch (error) {
+      setStatus(status, error.message, true);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  document.querySelector("#askForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const status = document.querySelector("#askStatus");
+    const answer = document.querySelector("#answer");
+    const button = event.submitter;
+    button.disabled = true;
+    answer.replaceChildren();
+    setStatus(status, "문서 검색 후 OpenAI 답변 생성 중...");
+    try {
+      const data = await api("/api/v1/rag/ask", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({question: document.querySelector("#question").value})
+      });
+      setStatus(status, "답변 생성 완료");
+      const node = document.createElement("div");
+      node.className = "answer";
+      node.textContent = data.answer;
+      answer.appendChild(node);
+    } catch (error) {
+      setStatus(status, error.message, true);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  updateAuthStatus();
+</script>
+</body>
+</html>

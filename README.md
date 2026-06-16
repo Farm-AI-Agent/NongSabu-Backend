@@ -1,55 +1,47 @@
 # NongSabu Backend
 
-초보·소규모 농가를 위한 맞춤형 농업 AI 비서 서비스의 백엔드 저장소다. 현재 단계에서는 프론트엔드 없이 Spring Boot API 서버, FastAPI 이미지 분석 서버, PostgreSQL + pgvector 기반의 백엔드 MVP를 구현한다.
+초보·소규모 농가를 위한 맞춤형 농업 AI 비서 서비스의 백엔드 MVP입니다.
 
-## 루트 구조
+- Spring Boot: 인증, 농장·작물 관리, 이미지 분석 연동, RAG, 리포트 생성
+- FastAPI: 작물 이미지 병충해 더미 분석
+- PostgreSQL + pgvector: 서비스 데이터와 임베딩 벡터 저장
 
-```text
-project-root/
-├── backend-spring/
-├── ai-server/
-├── docker-compose.yml
-├── .env.example
-├── README.md
-└── AGENTS.md
-```
+## 로컬 실행
 
-## 기술 스택
-
-- `backend-spring`: Spring Boot 3.x, Java 17, Gradle
-- `ai-server`: FastAPI, Python 3.11+
-- `postgres`: PostgreSQL 16 + pgvector
-
-## 로컬 실행 방법
-
-1. `.env.example`을 복사해서 `.env` 파일을 만든다.
-2. 프로젝트 루트에서 아래 명령을 실행한다.
+1. `.env.example`을 `.env`로 복사하고 필요한 값을 설정합니다.
+2. 프로젝트 루트에서 실행합니다.
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
-## 헬스 체크
+## 확인 주소
 
-- Spring Boot: [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health)
-- FastAPI: [http://localhost:8000/health](http://localhost:8000/health)
+- Spring Boot Health: http://localhost:8080/actuator/health
+- Spring Boot Swagger: http://localhost:8080/swagger-ui/index.html
+- FastAPI Health: http://localhost:8000/health
+- FastAPI Docs: http://localhost:8000/docs
 
-## 주요 확인 주소
+## DB 마이그레이션
 
-- Spring Boot Swagger UI: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
-- FastAPI Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+DB 스키마는 Flyway가 버전 순서대로 관리합니다. 이미 적용된 마이그레이션 파일은 수정하지 않고,
+새로운 변경은 다음 버전 파일로 추가합니다.
 
-## 현재 포함된 기본 구조
+- `V1__enable_pgvector.sql`: pgvector 확장 활성화
+- `V2__create_core_domain_tables.sql`: 최초 핵심 도메인 테이블 생성
+- `V3__consolidate_member_domain_tables.sql`: Member 기반 표준 테이블 생성과 레거시·중복 테이블 정리
 
-- 도메인 기준으로 분리된 Spring Boot 패키지 구조
-- Spring Security, Validation, JPA, PostgreSQL, Flyway, OpenAPI, WebFlux 의존성
-- FastAPI `/api/v1/disease/predict` 더미 병충해 예측 API
-- `postgres`, `ai-server`, `backend-spring`을 포함한 Docker Compose 구성
-- pgvector 확장 활성화 및 핵심 도메인 스키마용 Flyway 마이그레이션
-- 이미지 분석, RAG, SSE, 외부 API, MCP 연동을 위한 기본 확장 구조
+V3는 과거 `User` 기반 컬럼인 `owner_id`, `uploaded_by`를 제거하고 모든 소유 관계를
+`member_id`로 통일합니다. 사용되지 않는 중복 테이블에 데이터가 남아 있으면 데이터 유실을
+방지하기 위해 마이그레이션을 중단합니다.
 
-## 참고
+## 주요 API
 
-- FastAPI 서버는 현재 더미 병충해 분석 결과를 반환한다.
-- Spring Boot 서버는 FastAPI 예측 엔드포인트를 호출할 수 있는 구조를 갖춘 상태다.
-- Spring AI 연동은 버전 충돌 가능성을 피하기 위해 구조만 준비하고 실제 연동은 추후 단계에서 진행한다.
+- 인증: `/api/auth/**`
+- 회원: `/api/members/**`
+- 농장 프로필: `/api/farm-profiles/**`
+- 작물·재배 작물: `/api/crops`, `/api/user-crops/**`
+- 농장: `/api/v1/farms/**`
+- 이미지 분석·SSE: `/api/v1/analysis/images/**`
+- 문서·RAG: `/api/v1/documents`, `/api/v1/rag/**`
+- 분석 리포트: `/api/v1/reports/**`

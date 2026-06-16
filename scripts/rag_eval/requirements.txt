@@ -1,0 +1,2 @@
+pypdf==5.9.0
+requests==2.32.4

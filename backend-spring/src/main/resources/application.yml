@@ -6,6 +6,32 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:local}
   application:
     name: farm-ai-backend
+  ai:
+    model:
+      chat: openai
+      embedding: openai
+      image: none
+      moderation: none
+      audio:
+        speech: none
+        transcription: none
+    openai:
+      api-key: ${OPENAI_API_KEY:not-configured}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+      chat:
+        options:
+          model: ${APP_CHAT_MODEL:gpt-4.1-mini}
+      embedding:
+        options:
+          model: ${APP_EMBEDDING_MODEL:text-embedding-3-small}
+          dimensions: ${APP_EMBEDDING_DIMENSION:1536}
+    vectorstore:
+      pgvector:
+        initialize-schema: true
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: ${APP_EMBEDDING_DIMENSION:1536}
+        max-document-batch-size: 1000
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/farm_ai}
     username: ${SPRING_DATASOURCE_USERNAME:farm_user}
@@ -17,14 +43,11 @@ spring:
       embeddingDimension: ${APP_EMBEDDING_DIMENSION:1536}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     open-in-view: false
     properties:
       hibernate:
         format_sql: true
-  sql:
-    init:
-      mode: always
   servlet:
     multipart:
       max-file-size: 20MB
@@ -47,7 +70,14 @@ app:
   ai-server:
     base-url: ${AI_SERVER_BASE_URL:http://localhost:8000}
   embedding:
+    model: ${APP_EMBEDDING_MODEL:text-embedding-3-small}
     dimension: ${APP_EMBEDDING_DIMENSION:1536}
+  rag:
+    top-k: ${APP_RAG_TOP_K:4}
+    similarity-threshold: ${APP_RAG_SIMILARITY_THRESHOLD:0.35}
+  document:
+    chunk-size: ${APP_DOCUMENT_CHUNK_SIZE:1200}
+    chunk-overlap: ${APP_DOCUMENT_CHUNK_OVERLAP:200}
   storage:
     upload-dir: ${APP_STORAGE_UPLOAD_DIR:uploads}
   external:
