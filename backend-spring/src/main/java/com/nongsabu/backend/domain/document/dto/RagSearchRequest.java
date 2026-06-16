@@ -8,7 +8,9 @@ public record RagSearchRequest(
         String query,
 
         @Min(value = 1, message = "topK는 1 이상이어야 합니다.")
-        int topK
+        int topK,
+
+        String retrievalMode
 ) {
 }
 

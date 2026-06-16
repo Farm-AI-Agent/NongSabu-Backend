@@ -1,4 +1,5 @@
 -- Canonical API tables. These were previously created implicitly by Hibernate.
+
 CREATE TABLE IF NOT EXISTS farms (
     id BIGSERIAL PRIMARY KEY,
     member_id BIGINT NOT NULL REFERENCES member (id) ON DELETE CASCADE,
@@ -72,7 +73,21 @@ CREATE TABLE IF NOT EXISTS analysis_reports (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- CREATE TABLE IF NOT EXISTS does not add missing columns to legacy tables.
+-- Add ownership columns explicitly before migrating owner_id/uploaded_by data.
+-- Keep them nullable first because legacy rows may not be mapped yet.
+
+ALTER TABLE farms
+    ADD COLUMN IF NOT EXISTS member_id BIGINT;
+
+ALTER TABLE uploaded_images
+    ADD COLUMN IF NOT EXISTS member_id BIGINT;
+
+ALTER TABLE document_assets
+    ADD COLUMN IF NOT EXISTS member_id BIGINT;
+
 -- Move legacy users into Member before removing legacy ownership columns.
+
 DO $$
 BEGIN
     IF to_regclass('public.users') IS NOT NULL THEN
@@ -83,52 +98,188 @@ BEGIN
     END IF;
 END $$;
 
+-- Migrate legacy ownership columns safely.
+-- Use dynamic SQL because legacy columns may or may not exist depending on the DB state.
+
 DO $$
 BEGIN
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'farms' AND column_name = 'owner_id'
-    ) THEN
-        UPDATE farms f
-        SET member_id = m.id
-        FROM users u
-        JOIN member m ON m.email = u.email
-        WHERE f.owner_id = u.id AND f.member_id IS NULL;
-        ALTER TABLE farms DROP COLUMN owner_id CASCADE;
+    IF to_regclass('public.users') IS NOT NULL
+       AND EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'farms'
+              AND column_name = 'owner_id'
+       )
+       AND EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'farms'
+              AND column_name = 'member_id'
+       )
+    THEN
+        EXECUTE '
+            UPDATE farms f
+            SET member_id = m.id
+            FROM users u
+            JOIN member m ON m.email = u.email
+            WHERE f.owner_id = u.id
+              AND f.member_id IS NULL
+        ';
+
+        EXECUTE 'ALTER TABLE farms DROP COLUMN owner_id CASCADE';
     END IF;
 
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'uploaded_images' AND column_name = 'uploaded_by'
-    ) THEN
-        UPDATE uploaded_images i
-        SET member_id = m.id
-        FROM users u
-        JOIN member m ON m.email = u.email
-        WHERE i.uploaded_by = u.id AND i.member_id IS NULL;
-        ALTER TABLE uploaded_images DROP COLUMN uploaded_by CASCADE;
+    IF to_regclass('public.users') IS NOT NULL
+       AND EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'uploaded_images'
+              AND column_name = 'uploaded_by'
+       )
+       AND EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'uploaded_images'
+              AND column_name = 'member_id'
+       )
+    THEN
+        EXECUTE '
+            UPDATE uploaded_images i
+            SET member_id = m.id
+            FROM users u
+            JOIN member m ON m.email = u.email
+            WHERE i.uploaded_by = u.id
+              AND i.member_id IS NULL
+        ';
+
+        EXECUTE 'ALTER TABLE uploaded_images DROP COLUMN uploaded_by CASCADE';
     END IF;
 
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'document_assets' AND column_name = 'uploaded_by'
-    ) THEN
-        UPDATE document_assets d
-        SET member_id = m.id
-        FROM users u
-        JOIN member m ON m.email = u.email
-        WHERE d.uploaded_by = u.id AND d.member_id IS NULL;
-        ALTER TABLE document_assets DROP COLUMN uploaded_by CASCADE;
+    IF to_regclass('public.users') IS NOT NULL
+       AND EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'document_assets'
+              AND column_name = 'uploaded_by'
+       )
+       AND EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'document_assets'
+              AND column_name = 'member_id'
+       )
+    THEN
+        EXECUTE '
+            UPDATE document_assets d
+            SET member_id = m.id
+            FROM users u
+            JOIN member m ON m.email = u.email
+            WHERE d.uploaded_by = u.id
+              AND d.member_id IS NULL
+        ';
+
+        EXECUTE 'ALTER TABLE document_assets DROP COLUMN uploaded_by CASCADE';
     END IF;
 END $$;
 
--- Deprecated tables were never used by the active API. Refuse to discard unexpected data.
+-- Add foreign keys for legacy tables where CREATE TABLE IF NOT EXISTS did not create them.
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint c
+        JOIN pg_attribute a
+          ON a.attrelid = c.conrelid
+         AND a.attnum = ANY (c.conkey)
+        WHERE c.contype = 'f'
+          AND c.conrelid = 'public.farms'::regclass
+          AND c.confrelid = 'public.member'::regclass
+          AND a.attname = 'member_id'
+    ) THEN
+        ALTER TABLE farms
+            ADD CONSTRAINT fk_farms_member
+            FOREIGN KEY (member_id)
+            REFERENCES member (id)
+            ON DELETE CASCADE;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint c
+        JOIN pg_attribute a
+          ON a.attrelid = c.conrelid
+         AND a.attnum = ANY (c.conkey)
+        WHERE c.contype = 'f'
+          AND c.conrelid = 'public.uploaded_images'::regclass
+          AND c.confrelid = 'public.member'::regclass
+          AND a.attname = 'member_id'
+    ) THEN
+        ALTER TABLE uploaded_images
+            ADD CONSTRAINT fk_uploaded_images_member
+            FOREIGN KEY (member_id)
+            REFERENCES member (id)
+            ON DELETE CASCADE;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint c
+        JOIN pg_attribute a
+          ON a.attrelid = c.conrelid
+         AND a.attnum = ANY (c.conkey)
+        WHERE c.contype = 'f'
+          AND c.conrelid = 'public.document_assets'::regclass
+          AND c.confrelid = 'public.member'::regclass
+          AND a.attname = 'member_id'
+    ) THEN
+        ALTER TABLE document_assets
+            ADD CONSTRAINT fk_document_assets_member
+            FOREIGN KEY (member_id)
+            REFERENCES member (id)
+            ON DELETE CASCADE;
+    END IF;
+END $$;
+
+-- Apply NOT NULL only when legacy rows were successfully mapped.
+-- This prevents local legacy DBs from failing during migration.
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM farms WHERE member_id IS NULL) THEN
+        ALTER TABLE farms ALTER COLUMN member_id SET NOT NULL;
+    ELSE
+        RAISE NOTICE 'farms.member_id has NULL values. NOT NULL was not applied.';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM uploaded_images WHERE member_id IS NULL) THEN
+        ALTER TABLE uploaded_images ALTER COLUMN member_id SET NOT NULL;
+    ELSE
+        RAISE NOTICE 'uploaded_images.member_id has NULL values. NOT NULL was not applied.';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM document_assets WHERE member_id IS NULL) THEN
+        ALTER TABLE document_assets ALTER COLUMN member_id SET NOT NULL;
+    ELSE
+        RAISE NOTICE 'document_assets.member_id has NULL values. NOT NULL was not applied.';
+    END IF;
+END $$;
+
+-- Deprecated tables were never used by the active API.
+-- Refuse to discard unexpected data.
+
 DO $$
 DECLARE
-    table_name TEXT;
-    row_count BIGINT;
+    v_table_name TEXT;
+    v_row_count BIGINT;
 BEGIN
-    FOREACH table_name IN ARRAY ARRAY[
+    FOREACH v_table_name IN ARRAY ARRAY[
         'analysis_report',
         'disease_analysis',
         'crop_image',
@@ -137,12 +288,14 @@ BEGIN
         'document_chunks'
     ]
     LOOP
-        IF to_regclass('public.' || table_name) IS NOT NULL THEN
-            EXECUTE format('SELECT count(*) FROM %I', table_name) INTO row_count;
-            IF row_count > 0 THEN
+        IF to_regclass('public.' || v_table_name) IS NOT NULL THEN
+            EXECUTE format('SELECT count(*) FROM %I', v_table_name) INTO v_row_count;
+
+            IF v_row_count > 0 THEN
                 RAISE EXCEPTION
                     'Deprecated table % contains % rows. Migrate them manually before applying V3.',
-                    table_name, row_count;
+                    v_table_name,
+                    v_row_count;
             END IF;
         END IF;
     END LOOP;

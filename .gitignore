@@ -3,6 +3,9 @@ build/
 out/
 .idea/
 *.iml
+__pycache__/
+*.py[cod]
+*$py.class
 backend-spring/.gradle/
 backend-spring/build/
 backend-spring/bin/
@@ -11,8 +14,8 @@ ai-server/.venv/
 ai-server/__pycache__/
 ai-server/.pytest_cache/
 ai-server/uploads/
-**/__pycache__/
-**/.pytest_cache/
-*.py[cod]
-*.pyc.*
+scripts/
 .env
+
+context_*.txt
+*.log

@@ -3,19 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>NongSabu RAG Test</title>
+  <title>NongSabu RAG Admin Test</title>
   <style>
     :root {
-      --ink: #16231b;
-      --muted: #627067;
+      --bg: #f4f7f2;
+      --panel: #ffffff;
+      --ink: #17251d;
+      --muted: #647269;
       --line: #d8e1da;
-      --panel: #fff;
       --accent: #276749;
       --accent-soft: #e8f3ec;
       --danger: #a33a32;
-      --bg: #f4f7f2;
     }
+
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       color: var(--ink);
@@ -23,28 +25,29 @@
       font-family: Arial, "Noto Sans KR", sans-serif;
       line-height: 1.55;
     }
+
     main {
-      width: min(1080px, calc(100% - 32px));
+      width: min(860px, calc(100% - 32px));
       margin: 32px auto 64px;
     }
+
     header { margin-bottom: 24px; }
     h1, h2 { margin: 0; }
-    h1 { font-size: clamp(28px, 5vw, 48px); }
+    h1 { font-size: clamp(28px, 5vw, 44px); }
     h2 { font-size: 20px; }
-    .subtitle { margin: 8px 0 0; color: var(--muted); }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 18px;
-    }
+    p { margin: 8px 0 0; color: var(--muted); }
+
     .card {
+      margin-top: 18px;
       padding: 22px;
       border: 1px solid var(--line);
       border-radius: 16px;
       background: var(--panel);
       box-shadow: 0 10px 30px rgba(31, 55, 39, 0.06);
     }
+
     form { display: grid; gap: 12px; margin-top: 16px; }
+
     label {
       display: grid;
       gap: 6px;
@@ -52,14 +55,20 @@
       font-size: 14px;
       font-weight: 700;
     }
-    input, textarea, button {
+
+    input, textarea, select, button {
       width: 100%;
       padding: 11px 12px;
       border: 1px solid var(--line);
       border-radius: 10px;
       font: inherit;
     }
-    textarea { min-height: 96px; resize: vertical; }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
     button {
       border-color: var(--accent);
       color: #fff;
@@ -67,8 +76,23 @@
       cursor: pointer;
       font-weight: 700;
     }
-    button.secondary { color: var(--accent); background: var(--accent-soft); }
-    button:disabled { cursor: wait; opacity: 0.65; }
+
+    button.secondary {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
     .status {
       margin-top: 14px;
       padding: 10px 12px;
@@ -77,70 +101,90 @@
       background: #f7f9f7;
       white-space: pre-wrap;
     }
-    .status.error { color: var(--danger); background: #fff1ef; }
-    .result { display: grid; gap: 10px; margin-top: 14px; }
-    .chunk, .answer {
+
+    .status.error {
+      color: var(--danger);
+      background: #fff1ef;
+    }
+
+    .answer {
+      margin-top: 14px;
       padding: 14px;
       border-left: 4px solid var(--accent);
       border-radius: 8px;
       background: var(--accent-soft);
       white-space: pre-wrap;
     }
-    .meta { margin-bottom: 6px; color: var(--muted); font-size: 12px; }
-    @media (max-width: 760px) {
-      .grid { grid-template-columns: 1fr; }
+
+    .sources {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 720px) {
+      .row { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
 <main>
   <header>
-    <h1>NongSabu RAG Lab</h1>
-    <p class="subtitle">인증, PDF 벡터 저장, 유사도 검색, OpenAI RAG 답변을 한 화면에서 확인합니다.</p>
+    <h1>NongSabu RAG Admin Test</h1>
+    <p>관리자용 문서 업로드와 RAG 답변을 빠르게 확인하는 테스트 페이지입니다.</p>
   </header>
 
-  <section class="grid">
-    <article class="card">
-      <h2>1. 인증</h2>
-      <form id="authForm">
-        <label>이메일 <input id="email" type="email" value="rag-test@example.com" required></label>
-        <label>비밀번호 <input id="password" type="password" value="password123" required></label>
-        <label>이름 <input id="fullName" value="RAG Tester" required></label>
+  <section class="card">
+    <h2>1. 로그인</h2>
+    <form id="authForm">
+      <div class="row">
+        <label>이메일
+          <input id="email" type="email" value="rag-test@example.com" autocomplete="username" required>
+        </label>
+        <label>비밀번호
+          <input id="password" type="password" value="password123" autocomplete="current-password" required>
+        </label>
+      </div>
+      <label>이름
+        <input id="fullName" value="RAG Tester" required>
+      </label>
+      <div class="row">
         <button type="button" id="signupButton" class="secondary">회원가입</button>
         <button type="submit">로그인</button>
-      </form>
-      <div id="authStatus" class="status">토큰 없음</div>
-    </article>
+      </div>
+    </form>
+    <div id="authStatus" class="status">토큰 없음</div>
+  </section>
 
-    <article class="card">
-      <h2>2. PDF 업로드</h2>
-      <form id="uploadForm">
-        <label>PDF 파일 <input id="pdfFile" type="file" accept="application/pdf,.pdf" required></label>
-        <button type="submit">파싱하고 VectorStore에 저장</button>
-      </form>
-      <div id="uploadStatus" class="status">업로드 대기 중</div>
-    </article>
+  <section class="card">
+    <h2>2. PDF 업로드</h2>
+    <p>업로드한 PDF는 파싱, chunking, embedding 후 RAG 검색에 사용됩니다.</p>
+    <form id="uploadForm">
+      <label>PDF 파일
+        <input id="pdfFile" type="file" accept="application/pdf,.pdf" required>
+      </label>
+      <button type="submit">PDF 업로드</button>
+    </form>
+    <div id="uploadStatus" class="status">업로드 대기 중</div>
+  </section>
 
-    <article class="card">
-      <h2>3. 유사도 검색</h2>
-      <form id="searchForm">
-        <label>검색어 <textarea id="searchQuery" required>토마토 병해충 대처 방법</textarea></label>
-        <label>Top K <input id="topK" type="number" min="1" max="20" value="4"></label>
-        <button type="submit">관련 청크 검색</button>
-      </form>
-      <div id="searchStatus" class="status">검색 대기 중</div>
-      <div id="searchResults" class="result"></div>
-    </article>
-
-    <article class="card">
-      <h2>4. RAG 질문</h2>
-      <form id="askForm">
-        <label>질문 <textarea id="question" required>업로드한 문서를 바탕으로 핵심 관리 방법을 알려줘.</textarea></label>
-        <button type="submit">OpenAI에 질문</button>
-      </form>
-      <div id="askStatus" class="status">질문 대기 중</div>
-      <div id="answer" class="result"></div>
-    </article>
+  <section class="card">
+    <h2>3. RAG 질문</h2>
+    <p>빠른 답변은 응답 속도를 우선하고, 정밀 답변은 답변 품질을 우선합니다.</p>
+    <form id="askForm">
+      <label>응답 모드
+        <select id="answerMode">
+          <option value="hybrid">빠른 답변</option>
+          <option value="hybrid-rerank">정밀 답변</option>
+        </select>
+      </label>
+      <label>질문
+        <textarea id="question" required>업로드한 문서를 바탕으로 포도 병해 관리 방법을 알려줘.</textarea>
+      </label>
+      <button type="submit">AI 답변 생성</button>
+    </form>
+    <div id="askStatus" class="status">질문 대기 중</div>
+    <div id="answer"></div>
   </section>
 </main>
 
@@ -163,7 +207,9 @@
 
   async function api(path, options = {}) {
     const headers = new Headers(options.headers || {});
-    if (token()) headers.set("Authorization", `Bearer ${token()}`);
+    if (token()) {
+      headers.set("Authorization", `Bearer ${token()}`);
+    }
     const response = await fetch(path, {...options, headers});
     const body = await response.json().catch(() => ({}));
     if (!response.ok || body.success === false) {
@@ -184,7 +230,7 @@
           name: document.querySelector("#fullName").value
         })
       });
-      setStatus(authStatus, "회원가입 완료. 로그인해주세요.");
+      setStatus(authStatus, "회원가입 완료. 로그인해 주세요.");
     } catch (error) {
       setStatus(authStatus, error.message, true);
     } finally {
@@ -218,47 +264,15 @@
     event.preventDefault();
     const status = document.querySelector("#uploadStatus");
     const button = event.submitter;
+    const file = document.querySelector("#pdfFile").files[0];
     const formData = new FormData();
-    formData.append("file", document.querySelector("#pdfFile").files[0]);
+    formData.append("file", file);
+
     button.disabled = true;
-    setStatus(status, "PDF 파싱 및 임베딩 중...");
+    setStatus(status, "PDF 업로드 및 문서 색인 중...");
     try {
       const data = await api("/api/v1/documents", {method: "POST", body: formData});
-      setStatus(status, `${data.filename}\n청크 ${data.chunkCount}개\n모델 ${data.embeddingModel}`);
-    } catch (error) {
-      setStatus(status, error.message, true);
-    } finally {
-      button.disabled = false;
-    }
-  });
-
-  document.querySelector("#searchForm").addEventListener("submit", async event => {
-    event.preventDefault();
-    const status = document.querySelector("#searchStatus");
-    const results = document.querySelector("#searchResults");
-    const button = event.submitter;
-    button.disabled = true;
-    results.replaceChildren();
-    setStatus(status, "벡터 검색 중...");
-    try {
-      const data = await api("/api/v1/rag/search", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-          query: document.querySelector("#searchQuery").value,
-          topK: Number(document.querySelector("#topK").value)
-        })
-      });
-      setStatus(status, `${data.items.length}개 청크 검색됨`);
-      data.items.forEach(item => {
-        const node = document.createElement("div");
-        node.className = "chunk";
-        const meta = document.createElement("div");
-        meta.className = "meta";
-        meta.textContent = `${item.filename} · chunk ${item.chunkIndex} · score ${item.score ?? "-"}`;
-        node.append(meta, document.createTextNode(item.content));
-        results.appendChild(node);
-      });
+      setStatus(status, `${data.filename}\nchunk ${data.chunkCount}개\nembedding: ${data.embeddingModel}`);
     } catch (error) {
       setStatus(status, error.message, true);
     } finally {
@@ -271,20 +285,31 @@
     const status = document.querySelector("#askStatus");
     const answer = document.querySelector("#answer");
     const button = event.submitter;
+
     button.disabled = true;
     answer.replaceChildren();
-    setStatus(status, "문서 검색 후 OpenAI 답변 생성 중...");
+    setStatus(status, "문서 검색 및 AI 답변 생성 중...");
     try {
       const data = await api("/api/v1/rag/ask", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({question: document.querySelector("#question").value})
+        body: JSON.stringify({
+          question: document.querySelector("#question").value,
+          topK: 4,
+          retrievalMode: document.querySelector("#answerMode").value
+        })
       });
+
       setStatus(status, "답변 생성 완료");
-      const node = document.createElement("div");
-      node.className = "answer";
-      node.textContent = data.answer;
-      answer.appendChild(node);
+      const answerNode = document.createElement("div");
+      answerNode.className = "answer";
+      answerNode.textContent = data.answer;
+
+      const sourcesNode = document.createElement("div");
+      sourcesNode.className = "sources";
+      sourcesNode.textContent = `참고 chunk: ${(data.sources || []).length}개`;
+
+      answer.append(answerNode, sourcesNode);
     } catch (error) {
       setStatus(status, error.message, true);
     } finally {
