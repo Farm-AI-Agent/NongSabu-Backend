@@ -27,6 +27,9 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class ImageAnalysisService {
 
+    private static final String SUPPORTED_CROP_NAME = "포도";
+    private static final String UNSUPPORTED_MESSAGE = "현재 MVP에서는 포도 병충해 분석만 지원합니다.";
+
     private final UploadedImageRepository uploadedImageRepository;
     private final ImageAnalysisResultRepository imageAnalysisResultRepository;
     private final CropRepository cropRepository;
@@ -44,6 +47,10 @@ public class ImageAnalysisService {
 
         UploadedImage image = createImageEntity(member, crop, file);
         analysisProgressBroker.publish(image.getId(), AnalysisStatus.PENDING.name(), "이미지 업로드가 완료되었습니다.");
+
+        if (!isSupportedCrop(crop)) {
+            return markUnsupported(image, crop);
+        }
 
         try {
             image.updateStatus(AnalysisStatus.PROCESSING);
@@ -79,6 +86,25 @@ public class ImageAnalysisService {
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "이미지를 찾을 수 없습니다."));
         ImageAnalysisResult result = imageAnalysisResultRepository.findByUploadedImageId(imageId).orElse(null);
         return AnalysisResponse.of(image, result);
+    }
+
+    private AnalysisResponse markUnsupported(UploadedImage image, Crop crop) {
+        image.updateStatus(AnalysisStatus.UNSUPPORTED);
+        ImageAnalysisResult result = imageAnalysisResultRepository.save(ImageAnalysisResult.builder()
+                .uploadedImage(image)
+                .diseaseName(null)
+                .confidence(0.0)
+                .severity(AnalysisStatus.UNSUPPORTED.name())
+                .summary(UNSUPPORTED_MESSAGE)
+                .recommendation("포도 작물을 선택해 이미지를 다시 업로드해주세요.")
+                .rawResponse("{\"supported\":false,\"cropName\":\"" + crop.getName() + "\"}")
+                .build());
+        analysisProgressBroker.publish(image.getId(), AnalysisStatus.UNSUPPORTED.name(), UNSUPPORTED_MESSAGE);
+        return AnalysisResponse.of(image, result);
+    }
+
+    private boolean isSupportedCrop(Crop crop) {
+        return SUPPORTED_CROP_NAME.equals(crop.getName());
     }
 
     private UploadedImage createImageEntity(Member member, Crop crop, MultipartFile file) {
