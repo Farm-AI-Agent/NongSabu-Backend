@@ -17,6 +17,7 @@ import com.nongsabu.backend.infra.ai.FastApiAnalysisClient;
 import com.nongsabu.backend.infra.ai.dto.AiAnalysisResponse;
 import com.nongsabu.backend.infra.storage.LocalStorageService;
 import java.io.IOException;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -101,10 +102,15 @@ public class ImageAnalysisService {
                 .uploadedImage(image)
                 .diseaseName(null)
                 .confidence(0.0)
-                .severity(AnalysisStatus.UNSUPPORTED.name())
+                .severity(null)
                 .summary(UNSUPPORTED_MESSAGE)
                 .recommendation("포도 작물을 선택한 이미지를 다시 업로드해주세요.")
-                .rawResponse("{\"supported\":false,\"cropName\":\"" + crop.getName() + "\"}")
+                .rawResponse(toJson(Map.of(
+                        "supported", false,
+                        "status", AnalysisStatus.UNSUPPORTED.name(),
+                        "message", UNSUPPORTED_MESSAGE,
+                        "cropName", crop.getName()
+                )))
                 .build());
         analysisProgressBroker.publish(image.getId(), AnalysisStatus.UNSUPPORTED.name(), UNSUPPORTED_MESSAGE);
         return AnalysisResponse.of(image, result);
@@ -136,9 +142,9 @@ public class ImageAnalysisService {
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "이미지를 찾을 수 없습니다."));
     }
 
-    private String toJson(AiAnalysisResponse aiResponse) {
+    private String toJson(Object value) {
         try {
-            return objectMapper.writeValueAsString(aiResponse);
+            return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException exception) {
             return "{}";
         }

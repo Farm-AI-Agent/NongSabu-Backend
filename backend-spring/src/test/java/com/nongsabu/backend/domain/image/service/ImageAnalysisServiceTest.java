@@ -90,9 +90,12 @@ class ImageAnalysisServiceTest {
         AnalysisResponse response = imageAnalysisService.uploadAndAnalyze(1L, 10L, file);
 
         assertThat(response.status()).isEqualTo(AnalysisStatus.COMPLETED.name());
+        assertThat(response.supported()).isTrue();
+        assertThat(response.message()).isEqualTo("이미지 분석이 완료되었습니다.");
         assertThat(response.cropName()).isEqualTo("\uD3EC\uB3C4");
         assertThat(response.diseaseName()).isEqualTo("Grape disease suspicion");
         assertThat(response.confidence()).isEqualTo(0.87);
+        assertThat(response.severity()).isEqualTo("LOW");
         assertThat(image.getAnalysisStatus()).isEqualTo(AnalysisStatus.COMPLETED);
         verify(fastApiAnalysisClient).analyze(file);
     }
@@ -114,7 +117,11 @@ class ImageAnalysisServiceTest {
         AnalysisResponse response = imageAnalysisService.uploadAndAnalyze(1L, 20L, file);
 
         assertThat(response.status()).isEqualTo(AnalysisStatus.UNSUPPORTED.name());
-        assertThat(response.severity()).isEqualTo(AnalysisStatus.UNSUPPORTED.name());
+        assertThat(response.supported()).isFalse();
+        assertThat(response.message()).contains("MVP");
+        assertThat(response.diseaseName()).isNull();
+        assertThat(response.confidence()).isZero();
+        assertThat(response.severity()).isNull();
         assertThat(response.summary()).contains("MVP");
         assertThat(image.getAnalysisStatus()).isEqualTo(AnalysisStatus.UNSUPPORTED);
         verify(fastApiAnalysisClient, never()).analyze(any());
@@ -159,6 +166,7 @@ class ImageAnalysisServiceTest {
 
         assertThat(response.imageId()).isEqualTo(100L);
         assertThat(response.status()).isEqualTo(AnalysisStatus.COMPLETED.name());
+        assertThat(response.supported()).isTrue();
         assertThat(response.diseaseName()).isEqualTo("Grape disease suspicion");
     }
 
@@ -204,6 +212,8 @@ class ImageAnalysisServiceTest {
         imageAnalysisService.uploadAndAnalyze(1L, 30L, file);
 
         assertThat(captor.getValue().getRawResponse()).contains("\uD30C\uD504\uB9AC\uCE74");
+        assertThat(captor.getValue().getRawResponse()).contains("\"supported\":false");
+        assertThat(captor.getValue().getSeverity()).isNull();
     }
 
     private MockMultipartFile imageFile() {
