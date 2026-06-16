@@ -1,0 +1,37 @@
+[project]
+name = "nongsabu-ai-server"
+version = "0.1.0"
+description = "NongSabu AI server - YOLO26 ONNX crop disease inference (CPU)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.4",
+    "uvicorn[standard]>=0.32.0",
+    "python-multipart>=0.0.12",
+    "pydantic>=2.9.2",
+    "pydantic-settings>=2.6.0",
+    "pillow>=11.0.0",
+    "numpy>=2.1.0",
+    # 추론 전용: onnxruntime(CPU)만 사용 — torch / ultralytics 불필요.
+    # ONNX export(.pt -> .onnx)는 GPU 서버에서 오프라인으로 수행.
+    "onnxruntime>=1.20.0",
+]
+
+[dependency-groups]
+# export/변환용 도구는 런타임 이미지에 포함하지 않는다(개발 그룹).
+# 로컬에서 모델을 직접 변환할 때만: `uv sync --group export`
+export = [
+    "ultralytics>=8.3.0",
+]
+dev = [
+    "pytest>=8.3.0",
+    "httpx>=0.27.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.uv]
+# 기본 sync 시 export 그룹은 제외(런타임 슬림 유지)
+default-groups = []
