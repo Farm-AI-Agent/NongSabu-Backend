@@ -12,10 +12,16 @@ class DiseasePredictor(Protocol):
         ...
 
 
-class DummyDiseasePredictor:
+class GrapeDummyDiseasePredictor:
+    """MVP-only grape disease predictor stub.
+
+    Spring Boot decides whether a crop is supported before calling FastAPI.
+    This service therefore represents only the grape analysis path and can be
+    replaced by a real grape ML model without changing the API route.
+    """
+
     async def predict(self, file: UploadFile) -> AnalysisResponse:
         file_bytes = await file.read()
-        filename = (file.filename or "").lower()
 
         try:
             with Image.open(BytesIO(file_bytes)) as image:
@@ -23,27 +29,17 @@ class DummyDiseasePredictor:
         except Exception:
             width, height = 0, 0
 
-        if "tomato" in filename:
-            diagnosis = "Tomato early blight suspicion"
-            severity = "MEDIUM"
-        elif "strawberry" in filename:
-            diagnosis = "Strawberry powdery mildew suspicion"
-            severity = "HIGH"
-        else:
-            diagnosis = "General crop disease suspicion"
-            severity = "LOW"
-
         return AnalysisResponse(
-            diagnosis=diagnosis,
+            diagnosis="Grape disease suspicion (dummy)",
             confidence=0.87,
-            severity=severity,
+            severity="LOW",
             summary=(
-                "This server currently returns a dummy prediction result. "
-                "A real ML model can replace DummyDiseasePredictor later."
+                "This MVP dummy predictor represents the grape disease analysis flow. "
+                "A real grape ML model can replace GrapeDummyDiseasePredictor later."
             ),
             recommended_action=(
-                "Inspect the affected area, isolate suspicious crops if needed, "
-                "and review the cultivation manual before applying treatment."
+                "Inspect grape leaves and clusters, isolate suspicious vines if needed, "
+                "and review grape disease guidance before applying treatment."
             ),
-            model_version=f"dummy-disease-predictor-v1:{len(file_bytes)}:{width}x{height}",
+            model_version=f"grape-dummy-disease-predictor-v1:{len(file_bytes)}:{width}x{height}",
         )
