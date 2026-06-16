@@ -2,6 +2,7 @@ package com.nongsabu.backend.domain.report.service;
 
 import com.nongsabu.backend.common.exception.BusinessException;
 import com.nongsabu.backend.domain.document.service.RagService;
+import com.nongsabu.backend.domain.externalapilog.service.ExternalApiLogService;
 import com.nongsabu.backend.domain.image.entity.ImageAnalysisResult;
 import com.nongsabu.backend.domain.image.entity.UploadedImage;
 import com.nongsabu.backend.domain.image.repository.ImageAnalysisResultRepository;
@@ -29,6 +30,7 @@ public class ReportService {
     private final RagService ragService;
     private final KamisClient kamisClient;
     private final LlmClient llmClient;
+    private final ExternalApiLogService externalApiLogService;
 
     @Transactional
     public AnalysisReportResponse generate(Long memberId, Long imageId) {
@@ -43,23 +45,50 @@ public class ReportService {
                 3
         );
         String ragContext = String.join("\n---\n", ragContextList);
-        String marketContext = kamisClient.getMarketSnapshot(resolveCropName(image));
-        String reportText = generateReportText(image, result, ragContext, marketContext);
+        String cropName = resolveCropName(image);
+        ExternalCallResult marketResult = getMarketContext(cropName);
+        LlmGenerationResult llmResult = generateReportText(image, result, ragContext, marketResult.content());
 
         AnalysisReport report = analysisReportRepository.findByUploadedImageId(imageId)
                 .orElseGet(() -> analysisReportRepository.save(AnalysisReport.builder()
                         .uploadedImage(image)
-                        .reportText(reportText)
+                        .reportText(llmResult.reportText())
                         .ragContext(ragContext)
-                        .externalMarketContext(marketContext)
+                        .externalMarketContext(marketResult.content())
                         .status(ReportStatus.GENERATED)
                         .build()));
-        report.refresh(reportText, ragContext, marketContext, ReportStatus.GENERATED);
+        report.refresh(llmResult.reportText(), ragContext, marketResult.content(), ReportStatus.GENERATED);
+
+        externalApiLogService.logKamisMarketSnapshot(
+                memberId,
+                report.getId(),
+                cropName,
+                marketResult.success(),
+                marketResult.errorMessage()
+        );
+        externalApiLogService.logLlmGeneration(
+                memberId,
+                report.getId(),
+                "analysis-report",
+                llmResult.prompt(),
+                llmResult.context(),
+                llmResult.generatedText(),
+                llmResult.success(),
+                llmResult.errorMessage()
+        );
 
         return AnalysisReportResponse.from(report);
     }
 
-    private String generateReportText(
+    private ExternalCallResult getMarketContext(String cropName) {
+        try {
+            return new ExternalCallResult(kamisClient.getMarketSnapshot(cropName), true, null);
+        } catch (RuntimeException exception) {
+            return new ExternalCallResult("시장 정보 조회에 실패했습니다: " + exception.getMessage(), false, exception.getMessage());
+        }
+    }
+
+    private LlmGenerationResult generateReportText(
             UploadedImage image,
             ImageAnalysisResult result,
             String ragContext,
@@ -70,12 +99,27 @@ public class ReportService {
         try {
             String generated = llmClient.generate(prompt, context);
             if (StringUtils.isNotBlank(generated)) {
-                return generated;
+                return new LlmGenerationResult(generated, prompt, context, generated, true, null);
             }
+            return new LlmGenerationResult(
+                    buildRuleBasedReport(result, ragContext, marketContext),
+                    prompt,
+                    context,
+                    generated,
+                    false,
+                    "LLM 응답이 비어 있습니다."
+            );
         } catch (Exception ignored) {
             // 로컬 MVP에서는 외부 LLM 설정이 없어도 리포트 생성 흐름을 검증할 수 있어야 한다.
+            return new LlmGenerationResult(
+                    buildRuleBasedReport(result, ragContext, marketContext),
+                    prompt,
+                    context,
+                    null,
+                    false,
+                    ignored.getMessage()
+            );
         }
-        return buildRuleBasedReport(result, ragContext, marketContext);
     }
 
     private String resolveCropName(UploadedImage image) {
@@ -142,5 +186,18 @@ public class ReportService {
                 StringUtils.isBlank(ragContext) ? "관련 매뉴얼 문맥이 없습니다." : ragContext,
                 marketContext
         );
+    }
+
+    private record ExternalCallResult(String content, boolean success, String errorMessage) {
+    }
+
+    private record LlmGenerationResult(
+            String reportText,
+            String prompt,
+            String context,
+            String generatedText,
+            boolean success,
+            String errorMessage
+    ) {
     }
 }
