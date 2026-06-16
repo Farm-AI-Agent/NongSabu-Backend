@@ -37,8 +37,9 @@ public class UploadedImage extends BaseTimeEntity {
     @JoinColumn(name = "farm_id")
     private Farm farm;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "crop_id")
+    // 병충해 분석은 작물별 모델 선택이 필요하므로 업로드 시 선택 작물을 필수로 둔다.
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "crop_id", nullable = false)
     private Crop crop;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

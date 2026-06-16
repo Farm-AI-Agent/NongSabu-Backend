@@ -1,6 +1,7 @@
 package com.nongsabu.backend.domain.farmprofile.entity;
 
 import com.nongsabu.backend.common.entity.BaseEntity;
+import com.nongsabu.backend.domain.crop.entity.Crop;
 import com.nongsabu.backend.domain.member.entity.Member;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,6 +12,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -45,10 +47,12 @@ public class FarmProfile extends BaseEntity {
     @Column(name = "farm_size", length = 100)
     private String farmSize;
 
-    @Column(name = "main_crop", length = 100)
-    private String mainCrop;
+    // 대표 작물은 문자열이 아니라 CROP 마스터와 연결해 정책 추천과 리포트 개인화에 재사용한다.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "main_crop_id")
+    private Crop mainCrop;
 
-    public void update(String region, ExperienceLevel experienceLevel, String farmSize, String mainCrop) {
+    public void update(String region, ExperienceLevel experienceLevel, String farmSize, Crop mainCrop) {
         this.region = region;
         this.experienceLevel = experienceLevel;
         this.farmSize = farmSize;

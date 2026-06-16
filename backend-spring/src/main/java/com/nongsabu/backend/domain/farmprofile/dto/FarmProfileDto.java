@@ -1,8 +1,8 @@
 package com.nongsabu.backend.domain.farmprofile.dto;
 
-import java.time.LocalDateTime;
 import com.nongsabu.backend.domain.farmprofile.entity.ExperienceLevel;
 import com.nongsabu.backend.domain.farmprofile.entity.FarmProfile;
+import java.time.LocalDateTime;
 
 public record FarmProfileDto(
         Long id,
@@ -10,7 +10,8 @@ public record FarmProfileDto(
         String region,
         ExperienceLevel experienceLevel,
         String farmSize,
-        String mainCrop,
+        Long mainCropId,
+        String mainCropName,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
@@ -22,10 +23,10 @@ public record FarmProfileDto(
                 farmProfile.getRegion(),
                 farmProfile.getExperienceLevel(),
                 farmProfile.getFarmSize(),
-                farmProfile.getMainCrop(),
+                farmProfile.getMainCrop() == null ? null : farmProfile.getMainCrop().getId(),
+                farmProfile.getMainCrop() == null ? null : farmProfile.getMainCrop().getName(),
                 farmProfile.getCreatedAt(),
                 farmProfile.getUpdatedAt()
         );
     }
 }
-

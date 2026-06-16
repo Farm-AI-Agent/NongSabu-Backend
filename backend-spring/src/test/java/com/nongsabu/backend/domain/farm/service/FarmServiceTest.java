@@ -41,7 +41,7 @@ class FarmServiceTest {
 
         FarmResponse response = farmService.createFarm(
                 1L,
-                new FarmRequest("farm-10", "Naju", "greenhouse", "grape", "notes")
+                new FarmRequest("farm-10", "Naju", "greenhouse", "notes")
         );
 
         assertThat(response.id()).isEqualTo(10L);
@@ -66,12 +66,12 @@ class FarmServiceTest {
         FarmResponse response = farmService.updateFarm(
                 1L,
                 10L,
-                new FarmRequest("updated", "Jeju", "field", "tomato", "updated-notes")
+                new FarmRequest("updated", "Jeju", "field", "updated-notes")
         );
 
         assertThat(response.name()).isEqualTo("updated");
         assertThat(response.location()).isEqualTo("Jeju");
-        assertThat(farm.getCropSummary()).isEqualTo("tomato");
+        assertThat(farm.getNotes()).isEqualTo("updated-notes");
     }
 
     @Test

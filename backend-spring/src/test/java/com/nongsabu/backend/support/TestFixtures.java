@@ -42,7 +42,6 @@ public final class TestFixtures {
                 .name("farm-" + id)
                 .location("Naju")
                 .cultivationArea("greenhouse")
-                .cropSummary("grape")
                 .notes("notes")
                 .build();
     }
@@ -54,7 +53,7 @@ public final class TestFixtures {
                 .region("Naju")
                 .experienceLevel(ExperienceLevel.BEGINNER)
                 .farmSize("small")
-                .mainCrop("grape")
+                .mainCrop(crop(10L, "포도"))
                 .build();
     }
 
