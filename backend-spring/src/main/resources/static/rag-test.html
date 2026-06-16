@@ -175,7 +175,7 @@
   document.querySelector("#signupButton").addEventListener("click", async event => {
     event.target.disabled = true;
     try {
-      await api("/api/auth/signup", {
+      await api("/api/v1/auth/signup", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
@@ -197,7 +197,7 @@
     const button = event.submitter;
     button.disabled = true;
     try {
-      const data = await api("/api/auth/login", {
+      const data = await api("/api/v1/auth/login", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
