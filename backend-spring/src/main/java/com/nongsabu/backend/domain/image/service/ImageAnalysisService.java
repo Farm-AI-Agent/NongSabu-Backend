@@ -3,8 +3,8 @@ package com.nongsabu.backend.domain.image.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nongsabu.backend.common.exception.BusinessException;
-import com.nongsabu.backend.domain.farm.entity.Farm;
-import com.nongsabu.backend.domain.farm.service.FarmService;
+import com.nongsabu.backend.domain.crop.entity.Crop;
+import com.nongsabu.backend.domain.crop.repository.CropRepository;
 import com.nongsabu.backend.domain.image.dto.AnalysisResponse;
 import com.nongsabu.backend.domain.image.entity.AnalysisStatus;
 import com.nongsabu.backend.domain.image.entity.ImageAnalysisResult;
@@ -29,7 +29,7 @@ public class ImageAnalysisService {
 
     private final UploadedImageRepository uploadedImageRepository;
     private final ImageAnalysisResultRepository imageAnalysisResultRepository;
-    private final FarmService farmService;
+    private final CropRepository cropRepository;
     private final MemberService memberService;
     private final LocalStorageService localStorageService;
     private final FastApiAnalysisClient fastApiAnalysisClient;
@@ -37,11 +37,12 @@ public class ImageAnalysisService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Transactional
-    public AnalysisResponse uploadAndAnalyze(Long memberId, Long farmId, MultipartFile file) {
-        Farm farm = farmService.getOwnedFarm(memberId, farmId);
+    public AnalysisResponse uploadAndAnalyze(Long memberId, Long cropId, MultipartFile file) {
+        Crop crop = cropRepository.findById(cropId)
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "작물을 찾을 수 없습니다."));
         Member member = memberService.getMember(memberId);
 
-        UploadedImage image = createImageEntity(farm, member, file);
+        UploadedImage image = createImageEntity(member, crop, file);
         analysisProgressBroker.publish(image.getId(), AnalysisStatus.PENDING.name(), "이미지 업로드가 완료되었습니다.");
 
         try {
@@ -80,12 +81,12 @@ public class ImageAnalysisService {
         return AnalysisResponse.of(image, result);
     }
 
-    private UploadedImage createImageEntity(Farm farm, Member member, MultipartFile file) {
+    private UploadedImage createImageEntity(Member member, Crop crop, MultipartFile file) {
         try {
             String storedPath = localStorageService.store("images", file);
             return uploadedImageRepository.save(UploadedImage.builder()
-                    .farm(farm)
                     .member(member)
+                    .crop(crop)
                     .originalFilename(file.getOriginalFilename() == null ? "unknown" : file.getOriginalFilename())
                     .storagePath(storedPath)
                     .contentType(file.getContentType())

@@ -1,6 +1,7 @@
 package com.nongsabu.backend.domain.image.entity;
 
 import com.nongsabu.backend.common.entity.BaseTimeEntity;
+import com.nongsabu.backend.domain.crop.entity.Crop;
 import com.nongsabu.backend.domain.farm.entity.Farm;
 import com.nongsabu.backend.domain.member.entity.Member;
 import jakarta.persistence.Column;
@@ -32,9 +33,13 @@ public class UploadedImage extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "farm_id")
     private Farm farm;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "crop_id")
+    private Crop crop;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "member_id")
