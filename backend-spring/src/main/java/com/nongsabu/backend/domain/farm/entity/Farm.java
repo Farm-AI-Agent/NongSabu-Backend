@@ -42,17 +42,14 @@ public class Farm extends BaseTimeEntity {
     @Column(length = 50)
     private String cultivationArea;
 
-    @Column(length = 255)
-    private String cropSummary;
-
+    // 농장별 실제 재배 작물은 FarmCrop에서 관리한다. 이 필드는 자유 메모 용도만 담당한다.
     @Column(length = 1000)
     private String notes;
 
-    public void update(String name, String location, String cultivationArea, String cropSummary, String notes) {
+    public void update(String name, String location, String cultivationArea, String notes) {
         this.name = name;
         this.location = location;
         this.cultivationArea = cultivationArea;
-        this.cropSummary = cropSummary;
         this.notes = notes;
     }
 }

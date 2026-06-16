@@ -1,6 +1,5 @@
 package com.nongsabu.backend.domain.farm.service;
 
-import java.util.List;
 import com.nongsabu.backend.common.exception.BusinessException;
 import com.nongsabu.backend.domain.farm.dto.FarmRequest;
 import com.nongsabu.backend.domain.farm.dto.FarmResponse;
@@ -8,6 +7,7 @@ import com.nongsabu.backend.domain.farm.entity.Farm;
 import com.nongsabu.backend.domain.farm.repository.FarmRepository;
 import com.nongsabu.backend.domain.member.entity.Member;
 import com.nongsabu.backend.domain.member.service.MemberService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,7 +28,6 @@ public class FarmService {
                 .name(request.name())
                 .location(request.location())
                 .cultivationArea(request.cultivationArea())
-                .cropSummary(request.cropSummary())
                 .notes(request.notes())
                 .build());
         return FarmResponse.from(farm);
@@ -47,7 +46,7 @@ public class FarmService {
     @Transactional
     public FarmResponse updateFarm(Long memberId, Long farmId, FarmRequest request) {
         Farm farm = getOwnedFarm(memberId, farmId);
-        farm.update(request.name(), request.location(), request.cultivationArea(), request.cropSummary(), request.notes());
+        farm.update(request.name(), request.location(), request.cultivationArea(), request.notes());
         return FarmResponse.from(farm);
     }
 

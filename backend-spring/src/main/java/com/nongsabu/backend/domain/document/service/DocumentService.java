@@ -4,8 +4,10 @@ import com.nongsabu.backend.common.exception.BusinessException;
 import com.nongsabu.backend.domain.document.dto.DocumentSummaryResponse;
 import com.nongsabu.backend.domain.document.dto.DocumentUploadResponse;
 import com.nongsabu.backend.domain.document.entity.DocumentAsset;
+import com.nongsabu.backend.domain.document.entity.DocumentChunk;
 import com.nongsabu.backend.domain.document.entity.DocumentParsingStatus;
 import com.nongsabu.backend.domain.document.repository.DocumentAssetRepository;
+import com.nongsabu.backend.domain.document.repository.DocumentChunkRepository;
 import com.nongsabu.backend.domain.member.entity.Member;
 import com.nongsabu.backend.domain.member.service.MemberService;
 import com.nongsabu.backend.infra.storage.LocalStorageService;
@@ -27,6 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class DocumentService {
 
     private final DocumentAssetRepository documentAssetRepository;
+    private final DocumentChunkRepository documentChunkRepository;
     private final MemberService memberService;
     private final LocalStorageService localStorageService;
     private final DocumentParser documentParser;
@@ -42,6 +45,7 @@ public class DocumentService {
         List<String> chunks = documentChunker.chunk(documentParser.parsePdf(file));
         DocumentAsset asset = createAsset(member, file);
 
+        documentChunkRepository.saveAll(toDocumentChunks(asset, chunks));
         vectorStore.add(toVectorDocuments(asset, memberId, chunks));
         asset.updateParsingStatus(DocumentParsingStatus.PARSED);
 
@@ -82,6 +86,19 @@ public class DocumentService {
                                 "filename", asset.getOriginalFilename()
                         )
                 ))
+                .toList();
+    }
+
+    private List<DocumentChunk> toDocumentChunks(DocumentAsset asset, List<String> chunks) {
+        return IntStream.range(0, chunks.size())
+                .mapToObj(index -> DocumentChunk.builder()
+                        .documentAsset(asset)
+                        .chunkIndex(index)
+                        .content(chunks.get(index))
+                        // PDF 파서가 페이지 정보를 제공하기 전까지는 문서 단위 chunk 메타데이터만 저장한다.
+                        .pageNumber(null)
+                        .sectionTitle(null)
+                        .build())
                 .toList();
     }
 }

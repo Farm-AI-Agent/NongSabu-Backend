@@ -73,7 +73,7 @@ public class ReportService {
                 return generated;
             }
         } catch (Exception ignored) {
-            // Keep report generation available in local MVP mode even when the external LLM is not configured.
+            // 로컬 MVP에서는 외부 LLM 설정이 없어도 리포트 생성 흐름을 검증할 수 있어야 한다.
         }
         return buildRuleBasedReport(result, ragContext, marketContext);
     }
@@ -81,9 +81,6 @@ public class ReportService {
     private String resolveCropName(UploadedImage image) {
         if (image.getCrop() != null) {
             return image.getCrop().getName();
-        }
-        if (image.getFarm() != null && image.getFarm().getCropSummary() != null) {
-            return image.getFarm().getCropSummary();
         }
         return "작물";
     }

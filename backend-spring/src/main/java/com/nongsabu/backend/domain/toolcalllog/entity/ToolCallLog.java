@@ -1,7 +1,6 @@
-package com.nongsabu.backend.domain.externalapilog.entity;
+package com.nongsabu.backend.domain.toolcalllog.entity;
 
 import com.nongsabu.backend.domain.member.entity.Member;
-import com.nongsabu.backend.domain.report.entity.AnalysisReport;
 import java.time.LocalDateTime;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -22,36 +21,28 @@ import org.hibernate.annotations.CreationTimestamp;
 @Getter
 @Builder
 @Entity
-@Table(name = "external_api_log")
+@Table(name = "tool_call_log")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-public class ExternalApiLog {
+public class ToolCallLog {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 외부 API 호출이 어떤 회원 요청에서 발생했는지 추적하기 위한 선택 연결이다.
+    // MCP 서버나 LLM Tool Calling이 회원 맞춤 추천에 사용될 때 요청 주체를 남긴다.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     private Member member;
 
-    // 리포트 생성 과정에서 사용된 외부 API 응답을 나중에 역추적할 수 있게 연결한다.
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "analysis_report_id")
-    private AnalysisReport analysisReport;
+    @Column(name = "tool_name", nullable = false, length = 120)
+    private String toolName;
 
-    @Column(nullable = false, length = 100)
-    private String provider;
+    @Column(name = "request_payload", columnDefinition = "jsonb")
+    private String requestPayload;
 
-    @Column(nullable = false, length = 255)
-    private String endpoint;
-
-    @Column(name = "request_params", columnDefinition = "jsonb")
-    private String requestParams;
-
-    @Column(name = "status_code")
-    private Integer statusCode;
+    @Column(name = "response_payload", columnDefinition = "jsonb")
+    private String responsePayload;
 
     @Column(nullable = false)
     private boolean success;
@@ -60,4 +51,3 @@ public class ExternalApiLog {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 }
-
