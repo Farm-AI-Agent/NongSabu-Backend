@@ -28,9 +28,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RequiredArgsConstructor
 public class ImageAnalysisService {
 
-    private static final String SUPPORTED_CROP_NAME = "\uD3EC\uB3C4";
-    private static final String UNSUPPORTED_MESSAGE =
-            "\uD604\uC7AC MVP\uC5D0\uC11C\uB294 \uD3EC\uB3C4 \uBCD1\uCDA9\uD574 \uBD84\uC11D\uB9CC \uC9C0\uC6D0\uD569\uB2C8\uB2E4.";
+    private static final String SUPPORTED_CROP_NAME = "포도";
+    private static final String UNSUPPORTED_MESSAGE = "현재 MVP에서는 포도 병충해 분석만 지원합니다.";
 
     private final UploadedImageRepository uploadedImageRepository;
     private final ImageAnalysisResultRepository imageAnalysisResultRepository;
@@ -44,11 +43,11 @@ public class ImageAnalysisService {
     @Transactional
     public AnalysisResponse uploadAndAnalyze(Long memberId, Long cropId, MultipartFile file) {
         Crop crop = cropRepository.findById(cropId)
-                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "\uC791\uBB3C\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."));
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "작물을 찾을 수 없습니다."));
         Member member = memberService.getMember(memberId);
 
         UploadedImage image = createImageEntity(member, crop, file);
-        analysisProgressBroker.publish(image.getId(), AnalysisStatus.PENDING.name(), "\uC774\uBBF8\uC9C0 \uC5C5\uB85C\uB4DC\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
+        analysisProgressBroker.publish(image.getId(), AnalysisStatus.PENDING.name(), "이미지 업로드가 완료되었습니다.");
 
         if (!isSupportedCrop(crop)) {
             return markUnsupported(image, crop);
@@ -56,7 +55,7 @@ public class ImageAnalysisService {
 
         try {
             image.updateStatus(AnalysisStatus.PROCESSING);
-            analysisProgressBroker.publish(image.getId(), AnalysisStatus.PROCESSING.name(), "AI \uBCD1\uCDA9\uD574 \uBD84\uC11D\uC744 \uC694\uCCAD\uD588\uC2B5\uB2C8\uB2E4.");
+            analysisProgressBroker.publish(image.getId(), AnalysisStatus.PROCESSING.name(), "AI 병충해 분석을 요청했습니다.");
 
             AiAnalysisResponse aiResponse = fastApiAnalysisClient.analyze(file);
             ImageAnalysisResult result = imageAnalysisResultRepository.save(ImageAnalysisResult.builder()
@@ -70,22 +69,22 @@ public class ImageAnalysisService {
                     .build());
 
             image.updateStatus(AnalysisStatus.COMPLETED);
-            analysisProgressBroker.publish(image.getId(), AnalysisStatus.COMPLETED.name(), "\uBD84\uC11D \uACB0\uACFC \uC800\uC7A5\uC774 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
+            analysisProgressBroker.publish(image.getId(), AnalysisStatus.COMPLETED.name(), "분석 결과 저장이 완료되었습니다.");
             return AnalysisResponse.of(image, result);
         } catch (Exception exception) {
             image.updateStatus(AnalysisStatus.FAILED);
-            analysisProgressBroker.publish(image.getId(), AnalysisStatus.FAILED.name(), "\uBD84\uC11D\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+            analysisProgressBroker.publish(image.getId(), AnalysisStatus.FAILED.name(), "분석에 실패했습니다.");
             if (exception instanceof BusinessException businessException) {
                 throw businessException;
             }
-            throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "\uC774\uBBF8\uC9C0 \uBD84\uC11D \uCC98\uB9AC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4: " + exception.getMessage());
+            throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 분석 처리에 실패했습니다: " + exception.getMessage());
         }
     }
 
     @Transactional(readOnly = true)
     public AnalysisResponse getAnalysis(Long memberId, Long imageId) {
         UploadedImage image = uploadedImageRepository.findByIdAndMemberId(imageId, memberId)
-                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "\uC774\uBBF8\uC9C0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."));
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "이미지를 찾을 수 없습니다."));
         ImageAnalysisResult result = imageAnalysisResultRepository.findByUploadedImageId(imageId).orElse(null);
         return AnalysisResponse.of(image, result);
     }
@@ -104,7 +103,7 @@ public class ImageAnalysisService {
                 .confidence(0.0)
                 .severity(AnalysisStatus.UNSUPPORTED.name())
                 .summary(UNSUPPORTED_MESSAGE)
-                .recommendation("\uD3EC\uB3C4 \uC791\uBB3C\uC744 \uC120\uD0DD\uD55C \uC774\uBBF8\uC9C0\uB97C \uB2E4\uC2DC \uC5C5\uB85C\uB4DC\uD574\uC8FC\uC138\uC694.")
+                .recommendation("포도 작물을 선택한 이미지를 다시 업로드해주세요.")
                 .rawResponse("{\"supported\":false,\"cropName\":\"" + crop.getName() + "\"}")
                 .build());
         analysisProgressBroker.publish(image.getId(), AnalysisStatus.UNSUPPORTED.name(), UNSUPPORTED_MESSAGE);
@@ -128,13 +127,13 @@ public class ImageAnalysisService {
                     .analysisStatus(AnalysisStatus.PENDING)
                     .build());
         } catch (IOException exception) {
-            throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "\uC774\uBBF8\uC9C0 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+            throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 저장에 실패했습니다.");
         }
     }
 
     private void validateImageOwner(Long memberId, Long imageId) {
         uploadedImageRepository.findByIdAndMemberId(imageId, memberId)
-                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "\uC774\uBBF8\uC9C0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."));
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "이미지를 찾을 수 없습니다."));
     }
 
     private String toJson(AiAnalysisResponse aiResponse) {
