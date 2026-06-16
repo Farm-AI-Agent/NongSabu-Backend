@@ -22,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Service
 @RequiredArgsConstructor
@@ -89,6 +90,12 @@ public class ImageAnalysisService {
         return AnalysisResponse.of(image, result);
     }
 
+    @Transactional(readOnly = true)
+    public SseEmitter subscribeProgress(Long memberId, Long imageId) {
+        validateImageOwner(memberId, imageId);
+        return analysisProgressBroker.subscribe(imageId);
+    }
+
     private AnalysisResponse markUnsupported(UploadedImage image, Crop crop) {
         image.updateStatus(AnalysisStatus.UNSUPPORTED);
         ImageAnalysisResult result = imageAnalysisResultRepository.save(ImageAnalysisResult.builder()
@@ -123,6 +130,11 @@ public class ImageAnalysisService {
         } catch (IOException exception) {
             throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "\uC774\uBBF8\uC9C0 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
         }
+    }
+
+    private void validateImageOwner(Long memberId, Long imageId) {
+        uploadedImageRepository.findByIdAndMemberId(imageId, memberId)
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "\uC774\uBBF8\uC9C0\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."));
     }
 
     private String toJson(AiAnalysisResponse aiResponse) {

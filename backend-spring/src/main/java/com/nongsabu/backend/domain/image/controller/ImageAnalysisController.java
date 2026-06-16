@@ -2,7 +2,6 @@ package com.nongsabu.backend.domain.image.controller;
 
 import com.nongsabu.backend.common.api.ApiResponse;
 import com.nongsabu.backend.domain.image.dto.AnalysisResponse;
-import com.nongsabu.backend.domain.image.service.AnalysisProgressBroker;
 import com.nongsabu.backend.domain.image.service.ImageAnalysisService;
 import com.nongsabu.backend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class ImageAnalysisController {
 
     private final ImageAnalysisService imageAnalysisService;
-    private final AnalysisProgressBroker analysisProgressBroker;
 
     @PostMapping
     public ApiResponse<AnalysisResponse> uploadAndAnalyze(
@@ -42,7 +40,10 @@ public class ImageAnalysisController {
     }
 
     @GetMapping("/{imageId}/stream")
-    public SseEmitter streamProgress(@PathVariable Long imageId) {
-        return analysisProgressBroker.subscribe(imageId);
+    public SseEmitter streamProgress(
+            @AuthenticationPrincipal CustomUserDetails principal,
+            @PathVariable Long imageId
+    ) {
+        return imageAnalysisService.subscribeProgress(principal.id(), imageId);
     }
 }
