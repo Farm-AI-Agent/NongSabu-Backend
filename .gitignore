@@ -11,4 +11,8 @@ ai-server/.venv/
 ai-server/__pycache__/
 ai-server/.pytest_cache/
 ai-server/uploads/
+**/__pycache__/
+**/.pytest_cache/
+*.py[cod]
+*.pyc.*
 .env
