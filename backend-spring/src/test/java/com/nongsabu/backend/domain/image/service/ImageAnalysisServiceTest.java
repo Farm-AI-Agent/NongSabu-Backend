@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.nongsabu.backend.common.exception.BusinessException;
 import com.nongsabu.backend.domain.crop.repository.CropRepository;
@@ -33,6 +34,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @ExtendWith(MockitoExtension.class)
 class ImageAnalysisServiceTest {
@@ -158,6 +160,30 @@ class ImageAnalysisServiceTest {
         assertThat(response.imageId()).isEqualTo(100L);
         assertThat(response.status()).isEqualTo(AnalysisStatus.COMPLETED.name());
         assertThat(response.diseaseName()).isEqualTo("Grape disease suspicion");
+    }
+
+    @Test
+    void subscribeProgressAllowsOnlyImageOwner() {
+        var member = member(1L);
+        var grape = crop(10L, "\uD3EC\uB3C4");
+        UploadedImage image = uploadedImage(100L, member, grape, AnalysisStatus.PROCESSING);
+        SseEmitter emitter = new SseEmitter();
+        given(uploadedImageRepository.findByIdAndMemberId(100L, 1L)).willReturn(Optional.of(image));
+        given(analysisProgressBroker.subscribe(100L)).willReturn(emitter);
+
+        SseEmitter response = imageAnalysisService.subscribeProgress(1L, 100L);
+
+        assertThat(response).isSameAs(emitter);
+        verify(analysisProgressBroker).subscribe(100L);
+    }
+
+    @Test
+    void subscribeProgressRejectsOtherMemberImage() {
+        given(uploadedImageRepository.findByIdAndMemberId(100L, 2L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> imageAnalysisService.subscribeProgress(2L, 100L))
+                .isInstanceOf(BusinessException.class);
+        verifyNoInteractions(analysisProgressBroker);
     }
 
     @Test
