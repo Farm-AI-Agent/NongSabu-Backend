@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     # CORS 허용 오리진(쉼표 구분). 비우면 비활성(서버-서버 호출이면 불필요).
     cors_allow_origins: str = ""
 
+    # ── 디버그(검증용) ─────────────────────────────────────
+    # True 면 추론 후 '입력 이미지 + bbox 그린 결과'를 annotated_dir 에 저장한다.
+    # API 응답에는 영향 없음(좌표만 반환). 검증/시연 용도.
+    save_annotated: bool = False
+    annotated_dir: str = "debug"
+
     def resolved_model_path(self) -> Path | None:
         if not self.model_path:
             return None

@@ -17,4 +17,9 @@ ai-server/uploads/
 ai-server/models/
 ai-server/*.onnx
 ai-server/labels.json
+# 검증 산출물 / 테스트 데이터(로컬 유지, 커밋 안 함)
+ai-server/debug/
+ai-server/test_results/
+ai-server/*.jpg
+ai-server/*.txt
 .env

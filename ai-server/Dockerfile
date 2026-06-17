@@ -12,16 +12,20 @@ ENV UV_LINK_MODE=copy \
 
 WORKDIR /app
 
-# 1) 의존성만 먼저 설치(레이어 캐시). 기본 그룹만 → 목업 실행용 슬림 런타임.
-#    (ONNX 활성화 시: --group inference 추가)
+# 한글 폰트(검증용 annotated 이미지 라벨 렌더링). 없으면 영문 class_name 으로 폴백.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends fonts-nanum \
+ && rm -rf /var/lib/apt/lists/*
+
+# 1) 의존성만 먼저 설치(레이어 캐시). ONNX 추론용 inference 그룹 포함(onnxruntime/numpy).
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project --no-dev
+    uv sync --frozen --no-install-project --no-dev --group inference
 
 # 2) 소스 복사 후 프로젝트 설치
 COPY app ./app
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+    uv sync --frozen --no-dev --group inference
 
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
