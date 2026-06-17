@@ -17,6 +17,7 @@ import com.nongsabu.backend.domain.document.entity.DocumentParsingStatus;
 import com.nongsabu.backend.domain.document.repository.DocumentAssetRepository;
 import com.nongsabu.backend.domain.document.repository.DocumentChunkRepository;
 import com.nongsabu.backend.domain.member.service.MemberService;
+import com.nongsabu.backend.infra.search.opensearch.Bm25SearchClient;
 import com.nongsabu.backend.infra.storage.LocalStorageService;
 import java.io.IOException;
 import java.util.List;
@@ -56,6 +57,9 @@ class DocumentServiceTest {
     @Mock
     private VectorStore vectorStore;
 
+    @Mock
+    private Bm25SearchClient bm25SearchClient;
+
     @InjectMocks
     private DocumentService documentService;
 
@@ -94,6 +98,7 @@ class DocumentServiceTest {
                 .containsEntry("memberId", "1")
                 .containsEntry("documentId", "10")
                 .containsEntry("chunkIndex", 0);
+        verify(bm25SearchClient).indexChunks(saved, 1L, List.of("chunk-1", "chunk-2"));
     }
 
     @Test
