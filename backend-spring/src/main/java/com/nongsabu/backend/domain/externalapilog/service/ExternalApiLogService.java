@@ -75,6 +75,42 @@ public class ExternalApiLogService {
         );
     }
 
+    public void logToolCall(String toolName, String input, String outputPreview) {
+        Map<String, Object> requestParams = new LinkedHashMap<>();
+        requestParams.put("toolName", toolName);
+        requestParams.put("input", input == null ? "" : input);
+        requestParams.put("outputPreview", preview(outputPreview));
+        save(null, null, "TOOL_CALL", toolName, requestParams, HTTP_OK, true);
+    }
+
+    @Transactional
+    public void logDebugProbe(
+            String provider,
+            String endpoint,
+            Map<String, Object> requestSummary,
+            String responsePreview,
+            Integer statusCode,
+            boolean success,
+            String errorMessage,
+            long elapsedMillis
+    ) {
+        Map<String, Object> requestParams = new LinkedHashMap<>();
+        requestParams.put("requestSummary", requestSummary == null ? Map.of() : requestSummary);
+        requestParams.put("responsePreview", preview(responsePreview));
+        requestParams.put("elapsedMillis", elapsedMillis);
+        putIfNotBlank(requestParams, "errorMessage", errorMessage);
+
+        save(
+                null,
+                null,
+                provider,
+                endpoint,
+                requestParams,
+                statusCode == null ? (success ? HTTP_OK : HTTP_INTERNAL_ERROR) : statusCode,
+                success
+        );
+    }
+
     private void save(
             Long memberId,
             Long analysisReportId,

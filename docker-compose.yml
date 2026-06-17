@@ -87,8 +87,10 @@ services:
       APP_EMBEDDING_MODEL: ${APP_EMBEDDING_MODEL:-text-embedding-3-small}
       APP_EMBEDDING_DIMENSION: ${APP_EMBEDDING_DIMENSION:-1536}
       APP_CHAT_MODEL: ${APP_CHAT_MODEL:-gpt-4.1-mini}
+      APP_LLM_ENABLED: ${APP_LLM_ENABLED:-false}
       APP_RAG_TOP_K: ${APP_RAG_TOP_K:-4}
       APP_RAG_SIMILARITY_THRESHOLD: ${APP_RAG_SIMILARITY_THRESHOLD:-0.35}
+      APP_RAG_HYBRID_CANDIDATE_SIZE: ${APP_RAG_HYBRID_CANDIDATE_SIZE:-20}
       APP_DOCUMENT_CHUNK_SIZE: ${APP_DOCUMENT_CHUNK_SIZE:-1200}
       APP_DOCUMENT_CHUNK_OVERLAP: ${APP_DOCUMENT_CHUNK_OVERLAP:-200}
       APP_STORAGE_UPLOAD_DIR: /app/uploads
@@ -101,6 +103,10 @@ services:
       RERANKER_READ_TIMEOUT: ${RERANKER_READ_TIMEOUT:-180s}
       KAMIS_API_KEY: ${KAMIS_API_KEY:-replace-me}
       KAMIS_CUSTOMER_ID: ${KAMIS_CUSTOMER_ID:-replace-me}
+      NCPMS_API_KEY: ${NCPMS_API_KEY:-replace-me}
+      NONGSARO_API_KEY: ${NONGSARO_API_KEY:-replace-me}
+      GOV_SERVICE_API_KEY: ${GOV_SERVICE_API_KEY:-replace-me}
+      YOUNG_FARMER_API_KEY: ${YOUNG_FARMER_API_KEY:-replace-me}
     ports:
       - "${SPRING_PORT:-8080}:8080"
     volumes:
@@ -110,6 +116,8 @@ services:
         condition: service_healthy
       ai-server:
         condition: service_started
+      opensearch:
+        condition: service_healthy
       reranker-server:
         condition: service_healthy
 

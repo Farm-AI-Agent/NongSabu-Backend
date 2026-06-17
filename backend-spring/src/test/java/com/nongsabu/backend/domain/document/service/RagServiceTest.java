@@ -2,24 +2,24 @@ package com.nongsabu.backend.domain.document.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.nongsabu.backend.domain.document.dto.RagAnswerResponse;
 import com.nongsabu.backend.domain.document.dto.RagDiagnosticResponse;
+import com.nongsabu.backend.domain.document.dto.RagSearchItem;
 import com.nongsabu.backend.domain.document.dto.RagSearchResponse;
-import com.nongsabu.backend.domain.externalapilog.service.ExternalApiLogService;
-import com.nongsabu.backend.infra.ai.llm.LlmClient;
+import com.nongsabu.backend.infra.reranker.RerankerClient;
+import com.nongsabu.backend.infra.search.opensearch.Bm25SearchClient;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -31,53 +31,58 @@ class RagServiceTest {
     private VectorStore vectorStore;
 
     @Mock
-    private LlmClient llmClient;
+    private Bm25SearchClient bm25SearchClient;
 
     @Mock
-    private ExternalApiLogService externalApiLogService;
+    private RerankerClient rerankerClient;
+
+    @Mock
+    private ChatClient.Builder chatClientBuilder;
+
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+    private ChatClient chatClient;
 
     @Test
     void searchReturnsVectorStoreResultsAsRagItems() {
         RagService ragService = ragService(false);
         given(vectorStore.similaritySearch(any(SearchRequest.class)))
-                .willReturn(List.of(document("포도 노균병은 잎 뒷면을 확인합니다.", 10L, 0)));
+                .willReturn(List.of(document("포도 탄저병은 잎 뒷면을 확인합니다.", 10L, 0)));
 
-        RagSearchResponse response = ragService.search(1L, "포도 노균병", 3);
+        RagSearchResponse response = ragService.search(1L, "포도 탄저병", 3);
 
-        assertThat(response.query()).isEqualTo("포도 노균병");
+        assertThat(response.query()).isEqualTo("포도 탄저병");
         assertThat(response.items()).hasSize(1);
         assertThat(response.items().get(0).documentId()).isEqualTo(10L);
         assertThat(response.items().get(0).chunkIndex()).isZero();
-        assertThat(response.items().get(0).content()).contains("포도 노균병");
+        assertThat(response.items().get(0).content()).contains("포도 탄저병");
+        assertThat(response.items().get(0).retrievalSource()).isEqualTo("dense");
     }
 
     @Test
-    void askUsesLlmWhenEnabledAndSearchContextExists() {
+    void searchCanUseBm25Mode() {
+        RagService ragService = ragService(false);
+        given(bm25SearchClient.search(1L, "포도 병해", 2))
+                .willReturn(List.of(searchItem("bm25-1", 10L, 1, "포도 병해 BM25 결과", "bm25")));
+
+        RagSearchResponse response = ragService.search(1L, "포도 병해", 2, "bm25");
+
+        assertThat(response.items()).hasSize(1);
+        assertThat(response.items().get(0).retrievalSource()).isEqualTo("bm25");
+        verify(vectorStore, never()).similaritySearch(any(SearchRequest.class));
+    }
+
+    @Test
+    void askUsesChatClientWhenEnabledAndSearchContextExists() {
         RagService ragService = ragService(true);
         given(vectorStore.similaritySearch(any(SearchRequest.class)))
                 .willReturn(List.of(document("포도 탄저병은 병든 잎과 과실을 제거합니다.", 11L, 2)));
-        given(llmClient.generate(
-                argThat(prompt -> prompt.contains("포도 탄저병 대처")),
-                argThat(context -> context.contains("병든 잎과 과실"))
-        )).willReturn("병든 잎과 과실을 제거하고 방제 이력을 기록하세요.");
+        given(chatClient.prompt().user(any(String.class)).call().content())
+                .willReturn("병든 잎과 과실을 제거하고 방제 이력을 기록하세요.");
 
-        RagAnswerResponse response = ragService.ask(1L, "포도 탄저병 대처");
+        RagAnswerResponse response = ragService.ask(1L, "포도 탄저병 대처", null);
 
         assertThat(response.answer()).contains("방제 이력");
-        verify(llmClient).generate(
-                argThat(prompt -> prompt.contains("포도 탄저병 대처")),
-                argThat(context -> context.contains("병든 잎과 과실"))
-        );
-        verify(externalApiLogService).logLlmGeneration(
-                eq(1L),
-                isNull(),
-                eq("rag-ask"),
-                argThat(prompt -> prompt.contains("포도 탄저병 대처")),
-                argThat(context -> context.contains("병든 잎과 과실")),
-                eq("병든 잎과 과실을 제거하고 방제 이력을 기록하세요."),
-                eq(true),
-                isNull()
-        );
+        assertThat(response.sources()).hasSize(1);
     }
 
     @Test
@@ -86,12 +91,11 @@ class RagServiceTest {
         given(vectorStore.similaritySearch(any(SearchRequest.class)))
                 .willReturn(List.of(document("포도 병해 의심 시 잎 뒷면과 과실 상태를 함께 확인합니다.", 12L, 1)));
 
-        RagAnswerResponse response = ragService.ask(1L, "포도 병해 확인 방법");
+        RagAnswerResponse response = ragService.ask(1L, "포도 병해 확인 방법", null);
 
-        assertThat(response.answer()).contains("LLM 생성이 비활성화");
-        assertThat(response.answer()).contains("잎 뒷면과 과실 상태");
-        verify(llmClient, never()).generate(any(), any());
-        verify(externalApiLogService, never()).logLlmGeneration(any(), any(), any(), any(), any(), any(), any(Boolean.class), any());
+        assertThat(response.answer()).contains("포도 병해 의심");
+        assertThat(response.sources()).hasSize(1);
+        verify(chatClient, never()).prompt();
     }
 
     @Test
@@ -99,11 +103,11 @@ class RagServiceTest {
         RagService ragService = ragService(false);
         given(vectorStore.similaritySearch(any(SearchRequest.class))).willReturn(List.of());
 
-        RagAnswerResponse response = ragService.ask(1L, "지원하지 않는 질문");
+        RagAnswerResponse response = ragService.ask(1L, "지원하지 않는 질문", null);
 
-        assertThat(response.answer()).contains("관련 근거를 찾지 못했습니다");
-        verify(llmClient, never()).generate(any(), any());
-        verify(externalApiLogService, never()).logLlmGeneration(any(), any(), any(), any(), any(), any(), any(Boolean.class), any());
+        assertThat(response.answer()).isNotBlank();
+        assertThat(response.sources()).isEmpty();
+        verify(chatClient, never()).prompt();
     }
 
     @Test
@@ -120,7 +124,19 @@ class RagServiceTest {
     }
 
     private RagService ragService(boolean llmEnabled) {
-        return new RagService(vectorStore, llmClient, externalApiLogService, 3, 0.35, "test-embedding-model", llmEnabled);
+        given(chatClientBuilder.defaultSystem(any(String.class))).willReturn(chatClientBuilder);
+        given(chatClientBuilder.build()).willReturn(chatClient);
+        return new RagService(
+                vectorStore,
+                bm25SearchClient,
+                rerankerClient,
+                chatClientBuilder,
+                3,
+                0.35,
+                20,
+                "test-embedding-model",
+                llmEnabled
+        );
     }
 
     private Document document(String content, Long documentId, int chunkIndex) {
@@ -132,6 +148,25 @@ class RagServiceTest {
                         "chunkIndex", chunkIndex,
                         "filename", "grape-manual.pdf"
                 )
+        );
+    }
+
+    private RagSearchItem searchItem(String chunkId, Long documentId, int chunkIndex, String content, String source) {
+        return new RagSearchItem(
+                chunkId,
+                documentId,
+                chunkIndex,
+                "grape-manual.pdf",
+                content,
+                1.0,
+                null,
+                1,
+                null,
+                source,
+                null,
+                null,
+                null,
+                null
         );
     }
 }

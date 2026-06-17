@@ -6,6 +6,7 @@ import com.nongsabu.backend.domain.document.dto.DocumentUploadResponse;
 import com.nongsabu.backend.domain.document.dto.OpenSearchReindexResponse;
 import com.nongsabu.backend.domain.document.dto.RagAnswerResponse;
 import com.nongsabu.backend.domain.document.dto.RagAskRequest;
+import com.nongsabu.backend.domain.document.dto.RagDiagnosticResponse;
 import com.nongsabu.backend.domain.document.dto.RagSearchRequest;
 import com.nongsabu.backend.domain.document.dto.RagSearchResponse;
 import com.nongsabu.backend.domain.document.service.DocumentService;
@@ -80,5 +81,13 @@ public class DocumentController {
                 "OpenSearch reindex completed.",
                 openSearchReindexService.reindexCurrentUser(principal.id())
         );
+    }
+
+    @GetMapping("/api/v1/rag/diagnostics")
+    public ApiResponse<RagDiagnosticResponse> diagnose(
+            @AuthenticationPrincipal CustomUserDetails principal
+    ) {
+        RagDiagnosticResponse response = ragService.diagnose(principal.id());
+        return ApiResponse.ok(response.message(), response);
     }
 }
