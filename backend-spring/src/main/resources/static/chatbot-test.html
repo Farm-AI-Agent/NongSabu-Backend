@@ -85,6 +85,20 @@
   .tag { display: inline-block; background: #2d3748; color: #a0aec0; font-size: 11px; padding: 2px 7px; border-radius: 3px; margin: 2px; }
   .tag.green { background: #22543d; color: #68d391; }
   .endpoint-label { font-size: 11px; color: #4a5568; font-family: monospace; margin-top: 4px; }
+
+  .log-list { display: flex; flex-direction: column; gap: 8px; max-height: 600px; overflow-y: auto; }
+  .log-entry { background: #0f1117; border: 1px solid #2d3748; border-radius: 8px; padding: 12px; font-size: 12px; }
+  .log-entry.success { border-left: 3px solid #48bb78; }
+  .log-entry.failure { border-left: 3px solid #e53e3e; }
+  .log-entry .log-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+  .log-entry .log-time { color: #4a5568; font-size: 11px; margin-left: auto; }
+  .log-entry .log-input { color: #a0aec0; margin-bottom: 4px; }
+  .log-entry .log-input span { color: #68d391; }
+  .log-entry .log-output { color: #718096; background: #1a1f2e; border-radius: 4px; padding: 6px 8px; white-space: pre-wrap; word-break: break-all; max-height: 80px; overflow-y: auto; font-family: monospace; font-size: 11px; }
+  .log-empty { text-align: center; color: #4a5568; padding: 40px; font-size: 13px; }
+  .tool-chip { font-size: 11px; padding: 3px 9px; border-radius: 12px; font-weight: 600; }
+  .refresh-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .auto-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; background: #22543d; color: #68d391; }
 </style>
 </head>
 <body>
@@ -100,6 +114,7 @@
   <button class="nav-btn" onclick="showTab('probe')">🔌 API 연결 확인</button>
   <button class="nav-btn" onclick="showTab('disease')">🦠 병충해 챗봇 (RAG)</button>
   <button class="nav-btn" onclick="showTab('general')">🌾 농사지식 챗봇 (Tool)</button>
+  <button class="nav-btn" onclick="showTab('toollog')">🪵 도구 호출 로그</button>
 </div>
 
 <!-- AUTH TAB -->
@@ -204,7 +219,7 @@
     </div>
     <div class="chat-input-row" style="margin-top:10px">
       <textarea id="generalInput" placeholder="예: 오늘 배추 가격이 얼마인가요?" onkeydown="handleEnter(event,'general')"></textarea>
-      <button class="btn btn-primary" onclick="sendGeneral()">전송</button>
+      <button class="btn btn-primary" id="generalSendBtn" onclick="sendGeneral()">전송</button>
     </div>
     <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-secondary" style="font-size:11px" onclick="setQ('general','오늘 사과 가격이 얼마인가요?')">예시: 사과 가격</button>
@@ -212,6 +227,43 @@
       <button class="btn btn-secondary" style="font-size:11px" onclick="setQ('general','고추 탄저병 증상과 방제 방법')">예시: 고추 탄저병</button>
       <button class="btn btn-secondary" style="font-size:11px" onclick="setQ('general','배추 시세와 잘 자라는 조건을 알려주세요')">예시: 배추 시세+재배</button>
       <button class="btn btn-danger" style="font-size:11px" onclick="clearChat('general')">대화 초기화</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOOL CALL LOG TAB -->
+<div id="tab-toollog" class="tab">
+  <div class="card">
+    <div class="card-title">🪵 도구 호출 로그 (Tool Calling 실시간 확인)</div>
+    <p style="font-size:13px;color:#718096;margin-bottom:12px">
+      챗봇이 외부 API 도구를 호출할 때마다 기록됩니다. 농사지식 챗봇 탭에서 대화하면 이곳에 로그가 쌓입니다.
+    </p>
+    <div class="refresh-bar">
+      <button class="btn btn-primary" onclick="loadToolLogs()">🔄 새로고침</button>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+        <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()"> 자동 새로고침 (5초)
+      </label>
+      <span id="autoRefreshBadge" style="display:none" class="auto-badge">⏱ 자동 새로고침 ON</span>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        <label style="font-size:12px;color:#718096">최근</label>
+        <select id="logLimit" onchange="loadToolLogs()" style="background:#0f1117;border:1px solid #2d3748;color:#e2e8f0;padding:4px 8px;border-radius:4px;font-size:12px">
+          <option value="10">10건</option>
+          <option value="20" selected>20건</option>
+          <option value="50">50건</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px">
+      <span class="tool-chip" style="background:#744210;color:#f6e05e">getMarketPrice</span>
+      <span class="tool-chip" style="background:#22543d;color:#68d391">searchFarmDictionary</span>
+      <span class="tool-chip" style="background:#1a365d;color:#63b3ed">searchDiseasePestInfo</span>
+      <span class="tool-chip" style="background:#44337a;color:#b794f4">searchGovService</span>
+      <span class="tool-chip" style="background:#652b19;color:#fc8181">searchYoungFarmerPolicy</span>
+    </div>
+
+    <div id="toolLogList" class="log-list">
+      <div class="log-empty">아직 로그가 없습니다. 농사지식 챗봇 탭에서 대화를 시작하면 여기에 도구 호출 기록이 표시됩니다.</div>
     </div>
   </div>
 </div>
@@ -228,8 +280,17 @@ const PROBES = [
   { id: 'youngfarmer',   name: '청년농업인 정책 API',      color: '#b794f4', endpoint: '/api/v1/debug/integrations/probe/youngfarmer' },
 ];
 
+const TOOL_COLORS = {
+  getMarketPrice:          { bg: '#744210', fg: '#f6e05e' },
+  searchFarmDictionary:    { bg: '#22543d', fg: '#68d391' },
+  searchDiseasePestInfo:   { bg: '#1a365d', fg: '#63b3ed' },
+  searchGovService:        { bg: '#44337a', fg: '#b794f4' },
+  searchYoungFarmerPolicy: { bg: '#652b19', fg: '#fc8181' },
+};
+
 let token = localStorage.getItem('chatbot_token') || '';
 let baseUrl = localStorage.getItem('chatbot_base') || 'http://localhost:8080';
+let autoRefreshTimer = null;
 
 function init() {
   document.getElementById('baseUrl').value = baseUrl;
@@ -245,6 +306,7 @@ function showTab(name) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   event.target.classList.add('active');
+  if (name === 'toollog') loadToolLogs();
 }
 
 function saveBaseUrl() {
@@ -477,6 +539,8 @@ async function sendGeneral() {
   if (!q) return;
   if (!token) { alert('먼저 로그인하세요.'); return; }
   input.value = '';
+  const btn = document.getElementById('generalSendBtn');
+  btn.disabled = true;
 
   appendMsg('generalChatBox', 'user', q);
   const loader = appendLoading('generalChatBox');
@@ -497,9 +561,63 @@ async function sendGeneral() {
     const chat = data.data;
     const meta = `모드: ${chat.mode} | 도구 사용: getMarketPrice / searchFarmDictionary / searchDiseasePestInfo`;
     appendMsg('generalChatBox', 'ai', chat.answer, meta);
+    await loadToolLogs();
   } catch (e) {
     loader.remove();
     appendMsg('generalChatBox', 'ai', '요청 실패: ' + e.message, '네트워크 오류');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function loadToolLogs() {
+  const limit = document.getElementById('logLimit')?.value || '20';
+  const list = document.getElementById('toolLogList');
+  if (!list) return;
+
+  try {
+    const res = await fetch(baseUrl + `/api/v1/debug/tool-call-logs?limit=${limit}`);
+    if (!res.ok) {
+      list.innerHTML = `<div class="log-empty">로그 조회 실패 (HTTP ${res.status})</div>`;
+      return;
+    }
+
+    const data = await res.json();
+    const logs = data.data || [];
+    if (logs.length === 0) {
+      list.innerHTML = '<div class="log-empty">아직 도구 호출 로그가 없습니다. 농사지식 챗봇 탭에서 대화를 시작하면 여기에 기록됩니다.</div>';
+      return;
+    }
+
+    list.innerHTML = logs.map(log => {
+      const color = TOOL_COLORS[log.toolName] || { bg: '#2d3748', fg: '#a0aec0' };
+      const time = log.createdAt ? new Date(log.createdAt).toLocaleTimeString('ko-KR') : '-';
+      const input = log.input ? escHtml(log.input) : '-';
+      const output = log.outputPreview ? escHtml(log.outputPreview) : '-';
+      return `
+        <div class="log-entry ${log.success ? 'success' : 'failure'}">
+          <div class="log-header">
+            <span class="tool-chip" style="background:${color.bg};color:${color.fg}">${escHtml(log.toolName || '-')}</span>
+            <span style="color:${log.success ? '#48bb78' : '#e53e3e'};font-size:11px">${log.success ? '성공' : '실패'}</span>
+            <span class="log-time">${time}</span>
+          </div>
+          <div class="log-input">입력: <span>${input}</span></div>
+          <div class="log-output">${output}</div>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = `<div class="log-empty">로그 조회 오류: ${escHtml(e.message)}</div>`;
+  }
+}
+
+function toggleAutoRefresh() {
+  const on = document.getElementById('autoRefresh').checked;
+  document.getElementById('autoRefreshBadge').style.display = on ? 'inline-block' : 'none';
+  if (on) {
+    autoRefreshTimer = setInterval(loadToolLogs, 5000);
+  } else {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
   }
 }
 
