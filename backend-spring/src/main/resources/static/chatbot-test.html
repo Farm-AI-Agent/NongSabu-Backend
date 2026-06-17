@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>농사AI - 통합 API 검증 페이지</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+
+  .header { background: #1a1f2e; border-bottom: 1px solid #2d3748; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+  .header h1 { font-size: 20px; font-weight: 700; color: #68d391; }
+  .header .badge { background: #2d3748; color: #a0aec0; font-size: 11px; padding: 3px 8px; border-radius: 4px; }
+
+  .nav { display: flex; gap: 0; background: #1a1f2e; border-bottom: 1px solid #2d3748; padding: 0 24px; overflow-x: auto; }
+  .nav-btn { padding: 12px 20px; background: none; border: none; color: #718096; cursor: pointer; font-size: 13px; font-weight: 500; border-bottom: 2px solid transparent; white-space: nowrap; transition: all .2s; }
+  .nav-btn:hover { color: #e2e8f0; }
+  .nav-btn.active { color: #68d391; border-bottom-color: #68d391; }
+
+  .tab { display: none; padding: 24px; max-width: 1100px; margin: 0 auto; }
+  .tab.active { display: block; }
+
+  .card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+  .card-title { font-size: 13px; font-weight: 600; color: #a0aec0; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 14px; }
+
+  .form-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  input[type=text], input[type=email], input[type=password], textarea {
+    background: #0f1117; border: 1px solid #2d3748; border-radius: 6px; color: #e2e8f0; padding: 10px 12px; font-size: 14px; outline: none; transition: border-color .2s;
+  }
+  input[type=text]:focus, input[type=email]:focus, input[type=password]:focus, textarea:focus { border-color: #4a5568; }
+  input[type=text], input[type=email], input[type=password] { flex: 1; min-width: 160px; }
+  textarea { width: 100%; resize: vertical; min-height: 80px; font-family: inherit; }
+
+  .btn { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .2s; white-space: nowrap; }
+  .btn-primary { background: #48bb78; color: #0f1117; }
+  .btn-primary:hover { background: #68d391; }
+  .btn-secondary { background: #2d3748; color: #e2e8f0; }
+  .btn-secondary:hover { background: #4a5568; }
+  .btn-danger { background: #e53e3e; color: #fff; }
+  .btn-danger:hover { background: #fc8181; }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  .status-bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #0f1117; border-radius: 6px; font-size: 13px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-green { background: #48bb78; }
+  .dot-red { background: #e53e3e; }
+  .dot-yellow { background: #ecc94b; }
+  .dot-gray { background: #4a5568; }
+
+  .probe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .probe-card { background: #0f1117; border: 1px solid #2d3748; border-radius: 8px; padding: 14px; }
+  .probe-card .probe-name { font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+  .probe-card .probe-status { font-size: 12px; color: #718096; margin-bottom: 10px; min-height: 16px; }
+  .probe-card .probe-result { font-size: 11px; color: #a0aec0; background: #1a1f2e; border-radius: 4px; padding: 8px; max-height: 100px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; display: none; margin-top: 8px; }
+  .probe-card .probe-result.show { display: block; }
+  .probe-card.success { border-color: #276749; }
+  .probe-card.failure { border-color: #742a2a; }
+  .probe-card.running { border-color: #744210; }
+
+  .chat-container { display: flex; flex-direction: column; gap: 12px; }
+  .chat-box { background: #0f1117; border: 1px solid #2d3748; border-radius: 8px; padding: 16px; min-height: 300px; max-height: 500px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  .msg { display: flex; flex-direction: column; gap: 4px; max-width: 85%; }
+  .msg.user { align-self: flex-end; align-items: flex-end; }
+  .msg.ai { align-self: flex-start; }
+  .msg .bubble { padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .msg.user .bubble { background: #276749; color: #c6f6d5; }
+  .msg.ai .bubble { background: #1a1f2e; border: 1px solid #2d3748; color: #e2e8f0; }
+  .msg .meta { font-size: 11px; color: #4a5568; }
+  .msg.ai .meta { color: #48bb78; }
+  .sources-list { font-size: 11px; color: #68d391; padding: 4px 0; }
+
+  .chat-input-row { display: flex; gap: 8px; }
+  .chat-input-row textarea { flex: 1; min-height: 60px; max-height: 120px; }
+
+  .loading { display: inline-flex; gap: 4px; align-items: center; }
+  .loading span { width: 6px; height: 6px; background: #48bb78; border-radius: 50%; animation: bounce .6s infinite alternate; }
+  .loading span:nth-child(2) { animation-delay: .2s; }
+  .loading span:nth-child(3) { animation-delay: .4s; }
+  @keyframes bounce { to { transform: translateY(-6px); opacity: .4; } }
+
+  .token-display { font-family: monospace; font-size: 11px; background: #0f1117; padding: 8px 12px; border-radius: 6px; word-break: break-all; color: #68d391; max-height: 60px; overflow: hidden; text-overflow: ellipsis; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+  .label { font-size: 12px; color: #718096; margin-bottom: 4px; }
+  .tag { display: inline-block; background: #2d3748; color: #a0aec0; font-size: 11px; padding: 2px 7px; border-radius: 3px; margin: 2px; }
+  .tag.green { background: #22543d; color: #68d391; }
+  .endpoint-label { font-size: 11px; color: #4a5568; font-family: monospace; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🌱 농사AI 통합 API 검증</h1>
+  <span class="badge">Dev Tool</span>
+  <span class="badge" id="authBadge" style="color:#e53e3e">미인증</span>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="showTab('auth')">🔐 인증</button>
+  <button class="nav-btn" onclick="showTab('probe')">🔌 API 연결 확인</button>
+  <button class="nav-btn" onclick="showTab('disease')">🦠 병충해 챗봇 (RAG)</button>
+  <button class="nav-btn" onclick="showTab('general')">🌾 농사지식 챗봇 (Tool)</button>
+</div>
+
+<!-- AUTH TAB -->
+<div id="tab-auth" class="tab active">
+  <div class="card">
+    <div class="card-title">로그인 / JWT 토큰 발급</div>
+    <div class="form-row">
+      <input type="email" id="loginEmail" placeholder="이메일" value="">
+      <input type="password" id="loginPw" placeholder="비밀번호">
+      <button class="btn btn-primary" onclick="doLogin()">로그인</button>
+    </div>
+    <div id="loginStatus" class="status-bar" style="display:none">
+      <span class="dot dot-gray" id="loginDot"></span>
+      <span id="loginMsg"></span>
+    </div>
+  </div>
+
+  <div class="card" id="tokenCard" style="display:none">
+    <div class="card-title">발급된 JWT 토큰</div>
+    <div class="token-display" id="tokenDisplay"></div>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="copyToken()">복사</button>
+      <button class="btn btn-danger" onclick="clearToken()">토큰 초기화</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">서버 기본 URL</div>
+    <div class="form-row">
+      <input type="text" id="baseUrl" value="http://localhost:8080">
+      <button class="btn btn-secondary" onclick="saveBaseUrl()">저장</button>
+    </div>
+    <div class="endpoint-label">현재 엔드포인트 베이스: <span id="baseUrlDisplay">http://localhost:8080</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">신규 회원가입 (테스트 계정 생성)</div>
+    <div class="form-row">
+      <input type="email" id="signupEmail" placeholder="이메일">
+      <input type="password" id="signupPw" placeholder="비밀번호">
+      <input type="text" id="signupName" placeholder="이름">
+      <button class="btn btn-secondary" onclick="doSignup()">회원가입</button>
+    </div>
+    <div id="signupStatus" class="status-bar" style="display:none">
+      <span class="dot dot-gray" id="signupDot"></span>
+      <span id="signupMsg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- PROBE TAB -->
+<div id="tab-probe" class="tab">
+  <div class="card">
+    <div class="card-title">외부 API 연결 상태 일괄 확인</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="probeAll()">전체 프로브 실행</button>
+      <button class="btn btn-secondary" onclick="resetProbes()">초기화</button>
+    </div>
+    <div class="probe-grid" id="probeGrid">
+      <!-- Rendered by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- DISEASE CHATBOT TAB -->
+<div id="tab-disease" class="tab">
+  <div class="card">
+    <div class="card-title">🦠 병충해 판단 챗봇 (RAG 기반 - 문서 검색)</div>
+    <p style="font-size:13px;color:#718096;margin-bottom:14px">
+      업로드된 농업 문서를 기반으로 답변합니다. 문서에 관련 내용이 없으면 "관련 정보를 찾을 수 없습니다"라고 답변합니다.<br>
+      <span class="tag">엔드포인트: POST /api/v1/chat/disease</span>
+      <span class="tag">인증: JWT 필요</span>
+    </p>
+    <div class="chat-box" id="diseaseChatBox">
+      <div class="msg ai"><div class="bubble">안녕하세요! 병충해 관련 질문을 입력하세요. 업로드된 농업 문서에서 관련 정보를 찾아 답변드립니다.</div></div>
+    </div>
+    <div class="chat-input-row" style="margin-top:10px">
+      <textarea id="diseaseInput" placeholder="예: 고추 역병의 초기 증상은 어떻게 되나요?" onkeydown="handleEnter(event,'disease')"></textarea>
+      <button class="btn btn-primary" onclick="sendDisease()">전송</button>
+    </div>
+    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-secondary" style="font-size:11px" onclick="setQ('disease','고추 역병의 증상과 방제법을 알려주세요')">예시: 고추 역병</button>
+      <button class="btn btn-secondary" style="font-size:11px" onclick="setQ('disease','벼 도열병은 어떻게 예방하나요')">예시: 벼 도열병</button>
+      <button class="btn btn-secondary" style="font-size:11px" onclick="setQ('disease','사과 갈색썩음병 방제 방법')">예시: 사과 갈색썩음병</button>
+      <button class="btn btn-danger" style="font-size:11px" onclick="clearChat('disease')">대화 초기화</button>
+    </div>
+  </div>
+</div>
+
+<!-- GENERAL CHATBOT TAB -->
+<div id="tab-general" class="tab">
+  <div class="card">
+    <div class="card-title">🌾 농사지식 범용 챗봇 (Tool Calling - 외부 API 활용)</div>
+    <p style="font-size:13px;color:#718096;margin-bottom:14px">
+      KAMIS 가격, 농사로 사전, NCPMS 병해충 등 외부 API를 LLM이 직접 호출하여 답변합니다.<br>
+      <span class="tag">엔드포인트: POST /api/v1/chat/general</span>
+      <span class="tag">인증: JWT 필요</span>
+      <span class="tag green">@Tool: getMarketPrice / searchFarmDictionary / searchDiseasePestInfo</span>
+    </p>
+    <div class="chat-box" id="generalChatBox">
+      <div class="msg ai"><div class="bubble">안녕하세요! 농사 관련 무엇이든 물어보세요. KAMIS 가격 정보, 농사로 사전, NCPMS 병해충 정보를 활용하여 답변드립니다.</div></div>
+    </div>
+    <div class="chat-input-row" style="margin-top:10px">
+      <textarea id="generalInput" placeholder="예: 오늘 배추 가격이 얼마인가요?" onkeydown="handleEnter(event,'general')"></textarea>
+      <button class="btn btn-primary" onclick="sendGeneral()">전송</button>
+    </div>
+    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-secondary" style="font-size:11px" onclick="setQ('general','오늘 사과 가격이 얼마인가요?')">예시: 사과 가격</button>
+      <button class="btn btn-secondary" style="font-size:11px" onclick="setQ('general','포도 재배 방법을 알려주세요')">예시: 포도 재배</button>
+      <button class="btn btn-secondary" style="font-size:11px" onclick="setQ('general','고추 탄저병 증상과 방제 방법')">예시: 고추 탄저병</button>
+      <button class="btn btn-secondary" style="font-size:11px" onclick="setQ('general','배추 시세와 잘 자라는 조건을 알려주세요')">예시: 배추 시세+재배</button>
+      <button class="btn btn-danger" style="font-size:11px" onclick="clearChat('general')">대화 초기화</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PROBES = [
+  { id: 'fastapi',       name: 'FastAPI AI 서버',        color: '#4299e1', endpoint: '/api/v1/debug/integrations/probe/fastapi' },
+  { id: 'opensearch',    name: 'OpenSearch (BM25)',       color: '#9f7aea', endpoint: '/api/v1/debug/integrations/probe/opensearch' },
+  { id: 'reranker',      name: 'Reranker 서버',           color: '#ed8936', endpoint: '/api/v1/debug/integrations/probe/reranker' },
+  { id: 'kamis',         name: 'KAMIS 농산물 가격',       color: '#48bb78', endpoint: '/api/v1/debug/integrations/probe/kamis' },
+  { id: 'ncpms',         name: 'NCPMS 병해충 정보',       color: '#f6ad55', endpoint: '/api/v1/debug/integrations/probe/ncpms' },
+  { id: 'nongsaro',      name: '농사로 사전 API',          color: '#68d391', endpoint: '/api/v1/debug/integrations/probe/nongsaro' },
+  { id: 'govservice',    name: '공공데이터 행정 서비스',   color: '#76e4f7', endpoint: '/api/v1/debug/integrations/probe/govservice' },
+  { id: 'youngfarmer',   name: '청년농업인 정책 API',      color: '#b794f4', endpoint: '/api/v1/debug/integrations/probe/youngfarmer' },
+];
+
+let token = localStorage.getItem('chatbot_token') || '';
+let baseUrl = localStorage.getItem('chatbot_base') || 'http://localhost:8080';
+
+function init() {
+  document.getElementById('baseUrl').value = baseUrl;
+  document.getElementById('baseUrlDisplay').textContent = baseUrl;
+  if (token) {
+    showToken(token);
+  }
+  renderProbes();
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function saveBaseUrl() {
+  baseUrl = document.getElementById('baseUrl').value.trim().replace(/\/$/, '');
+  localStorage.setItem('chatbot_base', baseUrl);
+  document.getElementById('baseUrlDisplay').textContent = baseUrl;
+}
+
+async function doSignup() {
+  const email = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPw').value;
+  const name = document.getElementById('signupName').value.trim();
+  setStatus('signup', 'yellow', '회원가입 중...');
+  try {
+    const res = await fetch(baseUrl + '/api/v1/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, name })
+    });
+    const data = await res.json();
+    if (res.ok) setStatus('signup', 'green', '회원가입 완료! 이제 로그인하세요.');
+    else setStatus('signup', 'red', `오류: ${data.message || res.status}`);
+  } catch (e) {
+    setStatus('signup', 'red', '연결 실패: ' + e.message);
+  }
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPw').value;
+  setStatus('login', 'yellow', '로그인 중...');
+  try {
+    const res = await fetch(baseUrl + '/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (res.ok && data.data?.accessToken) {
+      token = data.data.accessToken;
+      localStorage.setItem('chatbot_token', token);
+      showToken(token);
+      setStatus('login', 'green', '로그인 성공! 토큰이 저장되었습니다.');
+    } else {
+      setStatus('login', 'red', `로그인 실패: ${data.message || res.status}`);
+    }
+  } catch (e) {
+    setStatus('login', 'red', '연결 실패: ' + e.message);
+  }
+}
+
+function showToken(t) {
+  token = t;
+  document.getElementById('tokenCard').style.display = 'block';
+  document.getElementById('tokenDisplay').textContent = t.substring(0, 60) + '...';
+  document.getElementById('authBadge').textContent = '인증됨';
+  document.getElementById('authBadge').style.color = '#48bb78';
+}
+
+function clearToken() {
+  token = '';
+  localStorage.removeItem('chatbot_token');
+  document.getElementById('tokenCard').style.display = 'none';
+  document.getElementById('authBadge').textContent = '미인증';
+  document.getElementById('authBadge').style.color = '#e53e3e';
+}
+
+function copyToken() {
+  navigator.clipboard.writeText(token).then(() => alert('토큰 복사됨'));
+}
+
+function setStatus(prefix, color, msg) {
+  const s = document.getElementById(prefix + 'Status');
+  const d = document.getElementById(prefix + 'Dot');
+  const m = document.getElementById(prefix + 'Msg');
+  s.style.display = 'flex';
+  d.className = 'dot dot-' + color;
+  m.textContent = msg;
+}
+
+// PROBE LOGIC
+function renderProbes() {
+  const grid = document.getElementById('probeGrid');
+  grid.innerHTML = PROBES.map(p => `
+    <div class="probe-card" id="pc-${p.id}">
+      <div class="probe-name" style="color:${p.color}">${p.name}</div>
+      <div class="probe-status" id="ps-${p.id}">대기 중</div>
+      <button class="btn btn-secondary" style="font-size:11px;padding:6px 10px" onclick="probeOne('${p.id}')">프로브</button>
+      <div class="probe-result" id="pr-${p.id}"></div>
+    </div>
+  `).join('');
+}
+
+async function probeAll() {
+  await Promise.all(PROBES.map(p => probeOne(p.id)));
+}
+
+function resetProbes() {
+  PROBES.forEach(p => {
+    const card = document.getElementById('pc-' + p.id);
+    card.className = 'probe-card';
+    document.getElementById('ps-' + p.id).textContent = '대기 중';
+    const r = document.getElementById('pr-' + p.id);
+    r.textContent = '';
+    r.classList.remove('show');
+  });
+}
+
+async function probeOne(id) {
+  const p = PROBES.find(x => x.id === id);
+  if (!p) return;
+  const card = document.getElementById('pc-' + id);
+  const status = document.getElementById('ps-' + id);
+  const result = document.getElementById('pr-' + id);
+
+  card.className = 'probe-card running';
+  status.textContent = '⏳ 프로브 중...';
+  result.classList.remove('show');
+
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+
+  try {
+    const start = Date.now();
+    const res = await fetch(baseUrl + p.endpoint, { headers });
+    const elapsed = Date.now() - start;
+    const data = await res.json();
+    const probe = data.data || data;
+    const ok = probe.success === true;
+
+    card.className = 'probe-card ' + (ok ? 'success' : 'failure');
+    status.textContent = (ok ? '✅ 성공' : '❌ 실패') + ` (${probe.elapsedMillis || elapsed}ms, HTTP ${probe.statusCode || res.status})`;
+
+    const preview = probe.responsePreview || probe.errorMessage || JSON.stringify(probe, null, 2);
+    result.textContent = preview.substring(0, 500);
+    result.classList.add('show');
+  } catch (e) {
+    card.className = 'probe-card failure';
+    status.textContent = '❌ 요청 실패: ' + e.message;
+    result.textContent = e.message;
+    result.classList.add('show');
+  }
+}
+
+// CHAT LOGIC
+function handleEnter(e, type) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    if (type === 'disease') sendDisease();
+    else sendGeneral();
+  }
+}
+
+function setQ(type, q) {
+  document.getElementById(type + 'Input').value = q;
+}
+
+function clearChat(type) {
+  const box = document.getElementById(type + 'ChatBox');
+  const greeting = type === 'disease'
+    ? '안녕하세요! 병충해 관련 질문을 입력하세요. 업로드된 농업 문서에서 관련 정보를 찾아 답변드립니다.'
+    : '안녕하세요! 농사 관련 무엇이든 물어보세요. KAMIS 가격 정보, 농사로 사전, NCPMS 병해충 정보를 활용하여 답변드립니다.';
+  box.innerHTML = `<div class="msg ai"><div class="bubble">${greeting}</div></div>`;
+}
+
+function appendMsg(boxId, role, text, meta) {
+  const box = document.getElementById(boxId);
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = `
+    <div class="bubble">${escHtml(text)}</div>
+    ${meta ? `<div class="meta">${meta}</div>` : ''}
+  `;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  return div;
+}
+
+function appendLoading(boxId) {
+  const box = document.getElementById(boxId);
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.innerHTML = '<div class="bubble"><div class="loading"><span></span><span></span><span></span></div></div>';
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  return div;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+async function sendDisease() {
+  const input = document.getElementById('diseaseInput');
+  const q = input.value.trim();
+  if (!q) return;
+  if (!token) { alert('먼저 로그인하세요.'); return; }
+  input.value = '';
+
+  appendMsg('diseaseChatBox', 'user', q);
+  const loader = appendLoading('diseaseChatBox');
+
+  try {
+    const res = await fetch(baseUrl + '/api/v1/chat/disease', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ question: q })
+    });
+    const data = await res.json();
+    loader.remove();
+
+    if (!res.ok) {
+      appendMsg('diseaseChatBox', 'ai', `오류 (${res.status}): ${data.message || '알 수 없는 오류'}`, '오류');
+      return;
+    }
+    const chat = data.data;
+    const hasCtx = chat.hasContext;
+    const sources = (chat.sources || []).join(', ') || '없음';
+    const meta = `모드: ${chat.mode} | 문서 참조: ${hasCtx ? '있음' : '없음'} | 출처: ${sources}`;
+    appendMsg('diseaseChatBox', 'ai', chat.answer, meta);
+  } catch (e) {
+    loader.remove();
+    appendMsg('diseaseChatBox', 'ai', '요청 실패: ' + e.message, '네트워크 오류');
+  }
+}
+
+async function sendGeneral() {
+  const input = document.getElementById('generalInput');
+  const q = input.value.trim();
+  if (!q) return;
+  if (!token) { alert('먼저 로그인하세요.'); return; }
+  input.value = '';
+
+  appendMsg('generalChatBox', 'user', q);
+  const loader = appendLoading('generalChatBox');
+
+  try {
+    const res = await fetch(baseUrl + '/api/v1/chat/general', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ question: q })
+    });
+    const data = await res.json();
+    loader.remove();
+
+    if (!res.ok) {
+      appendMsg('generalChatBox', 'ai', `오류 (${res.status}): ${data.message || '알 수 없는 오류'}`, '오류');
+      return;
+    }
+    const chat = data.data;
+    const meta = `모드: ${chat.mode} | 도구 사용: getMarketPrice / searchFarmDictionary / searchDiseasePestInfo`;
+    appendMsg('generalChatBox', 'ai', chat.answer, meta);
+  } catch (e) {
+    loader.remove();
+    appendMsg('generalChatBox', 'ai', '요청 실패: ' + e.message, '네트워크 오류');
+  }
+}
+
+init();
+</script>
+</body>
+</html>

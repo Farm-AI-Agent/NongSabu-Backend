@@ -45,6 +45,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/v1/auth/**",
+                                "/api/v1/debug/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
@@ -52,6 +53,9 @@ public class SecurityConfig {
                                 "/actuator/health",
                                 "/",
                                 "/rag-test.html",
+                                "/tool-api-debug.html",
+                                "/frontend-mock-test.html",
+                                "/chatbot-test.html",
                                 "/favicon.ico"
                         ).permitAll()
                         .requestMatchers("/api/**").authenticated()
