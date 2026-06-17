@@ -101,6 +101,10 @@ services:
       RERANKER_READ_TIMEOUT: ${RERANKER_READ_TIMEOUT:-180s}
       KAMIS_API_KEY: ${KAMIS_API_KEY:-replace-me}
       KAMIS_CUSTOMER_ID: ${KAMIS_CUSTOMER_ID:-replace-me}
+      NCPMS_API_KEY: ${NCPMS_API_KEY:-replace-me}
+      NONGSARO_API_KEY: ${NONGSARO_API_KEY_FARM_DIC:-replace-me}
+      GOV_SERVICE_API_KEY: ${GOV_SERVICE_API_KEY:-replace-me}
+      YOUNG_FARMER_API_KEY: ${YOUNG_FARMER_API_KEY:-replace-me}
     ports:
       - "${SPRING_PORT:-8080}:8080"
     volumes:

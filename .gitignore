@@ -15,6 +15,7 @@ ai-server/__pycache__/
 ai-server/.pytest_cache/
 ai-server/uploads/
 scripts/
+gpt-docs/
 .env
 
 context_*.txt

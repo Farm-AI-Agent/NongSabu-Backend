@@ -18,6 +18,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Getter
 @Builder
@@ -48,6 +50,7 @@ public class ExternalApiLog {
     private String endpoint;
 
     @Column(name = "request_params", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String requestParams;
 
     @Column(name = "status_code")
