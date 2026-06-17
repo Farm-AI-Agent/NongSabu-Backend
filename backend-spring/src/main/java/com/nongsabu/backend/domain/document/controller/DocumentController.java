@@ -3,12 +3,14 @@ package com.nongsabu.backend.domain.document.controller;
 import com.nongsabu.backend.common.api.ApiResponse;
 import com.nongsabu.backend.domain.document.dto.DocumentSummaryResponse;
 import com.nongsabu.backend.domain.document.dto.DocumentUploadResponse;
+import com.nongsabu.backend.domain.document.dto.OpenSearchReindexResponse;
 import com.nongsabu.backend.domain.document.dto.RagAnswerResponse;
 import com.nongsabu.backend.domain.document.dto.RagAskRequest;
 import com.nongsabu.backend.domain.document.dto.RagDiagnosticResponse;
 import com.nongsabu.backend.domain.document.dto.RagSearchRequest;
 import com.nongsabu.backend.domain.document.dto.RagSearchResponse;
 import com.nongsabu.backend.domain.document.service.DocumentService;
+import com.nongsabu.backend.domain.document.service.OpenSearchReindexService;
 import com.nongsabu.backend.domain.document.service.RagService;
 import com.nongsabu.backend.security.CustomUserDetails;
 import jakarta.validation.Valid;
@@ -29,6 +31,7 @@ public class DocumentController {
 
     private final DocumentService documentService;
     private final RagService ragService;
+    private final OpenSearchReindexService openSearchReindexService;
 
     @PostMapping(value = "/api/v1/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<DocumentUploadResponse> upload(
@@ -55,7 +58,7 @@ public class DocumentController {
     ) {
         return ApiResponse.ok(
                 "RAG 검색에 성공했습니다.",
-                ragService.search(principal.id(), request.query(), request.topK())
+                ragService.search(principal.id(), request.query(), request.topK(), request.retrievalMode())
         );
     }
 
@@ -66,7 +69,17 @@ public class DocumentController {
     ) {
         return ApiResponse.ok(
                 "RAG 답변 생성에 성공했습니다.",
-                ragService.ask(principal.id(), request.question())
+                ragService.ask(principal.id(), request.question(), request.topK(), request.retrievalMode())
+        );
+    }
+
+    @PostMapping("/api/v1/rag/opensearch/reindex")
+    public ApiResponse<OpenSearchReindexResponse> reindexOpenSearch(
+            @AuthenticationPrincipal CustomUserDetails principal
+    ) {
+        return ApiResponse.ok(
+                "OpenSearch reindex completed.",
+                openSearchReindexService.reindexCurrentUser(principal.id())
         );
     }
 

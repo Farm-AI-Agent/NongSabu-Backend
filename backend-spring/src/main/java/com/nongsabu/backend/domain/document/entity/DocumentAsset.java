@@ -13,6 +13,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -51,7 +52,30 @@ public class DocumentAsset extends BaseTimeEntity {
     @Column(nullable = false, length = 20)
     private DocumentParsingStatus parsingStatus;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean opensearchIndexed = false;
+
+    private LocalDateTime opensearchIndexedAt;
+
+    @Column(length = 1000)
+    private String opensearchIndexError;
+
     public void updateParsingStatus(DocumentParsingStatus parsingStatus) {
         this.parsingStatus = parsingStatus;
+    }
+
+    public void markOpenSearchIndexed() {
+        this.opensearchIndexed = true;
+        this.opensearchIndexedAt = LocalDateTime.now();
+        this.opensearchIndexError = null;
+    }
+
+    public void markOpenSearchIndexFailed(String errorMessage) {
+        this.opensearchIndexed = false;
+        this.opensearchIndexedAt = null;
+        this.opensearchIndexError = errorMessage == null
+                ? "OpenSearch indexing failed."
+                : errorMessage.substring(0, Math.min(errorMessage.length(), 1000));
     }
 }

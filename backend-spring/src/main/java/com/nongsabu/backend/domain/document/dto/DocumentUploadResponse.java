@@ -6,6 +6,8 @@ public record DocumentUploadResponse(
         Long id,
         String filename,
         String parsingStatus,
+        boolean opensearchIndexed,
+        String opensearchIndexError,
         int chunkCount,
         String embeddingModel
 ) {
@@ -15,6 +17,8 @@ public record DocumentUploadResponse(
                 asset.getId(),
                 asset.getOriginalFilename(),
                 asset.getParsingStatus().name(),
+                asset.isOpensearchIndexed(),
+                asset.getOpensearchIndexError(),
                 chunkCount,
                 embeddingModel
         );

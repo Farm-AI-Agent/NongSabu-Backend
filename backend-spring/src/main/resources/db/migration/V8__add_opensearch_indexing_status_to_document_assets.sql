@@ -1,0 +1,4 @@
+ALTER TABLE document_assets
+    ADD COLUMN IF NOT EXISTS opensearch_indexed BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS opensearch_indexed_at TIMESTAMP NULL,
+    ADD COLUMN IF NOT EXISTS opensearch_index_error VARCHAR(1000) NULL;

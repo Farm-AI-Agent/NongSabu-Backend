@@ -7,7 +7,9 @@ public record DocumentSummaryResponse(
         String filename,
         String contentType,
         String sourceType,
-        String parsingStatus
+        String parsingStatus,
+        boolean opensearchIndexed,
+        String opensearchIndexError
 ) {
 
     public static DocumentSummaryResponse from(DocumentAsset asset) {
@@ -16,7 +18,9 @@ public record DocumentSummaryResponse(
                 asset.getOriginalFilename(),
                 asset.getContentType(),
                 asset.getSourceType(),
-                asset.getParsingStatus().name()
+                asset.getParsingStatus().name(),
+                asset.isOpensearchIndexed(),
+                asset.getOpensearchIndexError()
         );
     }
 }

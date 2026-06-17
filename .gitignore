@@ -16,3 +16,6 @@ ai-server/uploads/
 *.py[cod]
 *.pyc.*
 .env
+
+context_*.txt
+*.log
