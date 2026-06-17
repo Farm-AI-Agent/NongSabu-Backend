@@ -98,6 +98,10 @@ app:
     openai-api-key: ${OPENAI_API_KEY:replace-me}
     kamis-api-key: ${KAMIS_API_KEY:replace-me}
     kamis-customer-id: ${KAMIS_CUSTOMER_ID:replace-me}
+    ncpms-api-key: ${NCPMS_API_KEY:replace-me}
+    nongsaro-api-key: ${NONGSARO_API_KEY:replace-me}
+    gov-service-key: ${GOV_SERVICE_API_KEY:replace-me}
+    young-farmer-service-key: ${YOUNG_FARMER_API_KEY:replace-me}
 
 logging:
   level:

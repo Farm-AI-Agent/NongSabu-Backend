@@ -14,7 +14,9 @@ ai-server/uploads/
 **/__pycache__/
 **/.pytest_cache/
 *.py[cod]
+*$py.class
 *.pyc.*
+gpt-docs/
 .env
 
 context_*.txt
