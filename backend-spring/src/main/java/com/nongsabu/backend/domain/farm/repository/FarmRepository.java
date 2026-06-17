@@ -10,4 +10,6 @@ public interface FarmRepository extends JpaRepository<Farm, Long> {
     List<Farm> findAllByMemberId(Long memberId);
 
     Optional<Farm> findByIdAndMemberId(Long id, Long memberId);
+
+    Optional<Farm> findFirstByMemberIdOrderByIdAsc(Long memberId);
 }
