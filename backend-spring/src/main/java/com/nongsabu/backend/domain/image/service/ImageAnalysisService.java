@@ -17,7 +17,10 @@ import com.nongsabu.backend.infra.ai.FastApiAnalysisClient;
 import com.nongsabu.backend.infra.ai.dto.AiAnalysisResponse;
 import com.nongsabu.backend.infra.storage.LocalStorageService;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -88,6 +91,27 @@ public class ImageAnalysisService {
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "이미지를 찾을 수 없습니다."));
         ImageAnalysisResult result = imageAnalysisResultRepository.findByUploadedImageId(imageId).orElse(null);
         return AnalysisResponse.of(image, result);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AnalysisResponse> getAnalyses(Long memberId) {
+        List<UploadedImage> images = uploadedImageRepository.findAllByMemberIdOrderByCreatedAtDesc(memberId);
+        if (images.isEmpty()) {
+            return List.of();
+        }
+
+        // List and detail screens share the same DTO so the frontend can render
+        // stored analysis records without additional mapping rules.
+        Map<Long, ImageAnalysisResult> resultByImageId = imageAnalysisResultRepository.findAllByUploadedImageIdIn(
+                        images.stream()
+                                .map(UploadedImage::getId)
+                                .toList())
+                .stream()
+                .collect(Collectors.toMap(result -> result.getUploadedImage().getId(), Function.identity()));
+
+        return images.stream()
+                .map(image -> AnalysisResponse.of(image, resultByImageId.get(image.getId())))
+                .toList();
     }
 
     @Transactional(readOnly = true)
