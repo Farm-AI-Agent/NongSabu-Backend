@@ -1,14 +1,16 @@
 package com.nongsabu.backend.domain.image.dto;
 
-import com.nongsabu.backend.domain.image.entity.ImageAnalysisResult;
 import com.nongsabu.backend.domain.image.entity.AnalysisStatus;
+import com.nongsabu.backend.domain.image.entity.ImageAnalysisResult;
 import com.nongsabu.backend.domain.image.entity.UploadedImage;
+import java.time.LocalDateTime;
 
 public record AnalysisResponse(
         Long imageId,
         Long cropId,
         String cropName,
         String filename,
+        LocalDateTime createdAt,
         String status,
         boolean supported,
         String message,
@@ -26,6 +28,7 @@ public record AnalysisResponse(
                 image.getCrop() == null ? null : image.getCrop().getId(),
                 image.getCrop() == null ? null : image.getCrop().getName(),
                 image.getOriginalFilename(),
+                image.getCreatedAt(),
                 status.name(),
                 status != AnalysisStatus.UNSUPPORTED,
                 resolveMessage(status, result),
