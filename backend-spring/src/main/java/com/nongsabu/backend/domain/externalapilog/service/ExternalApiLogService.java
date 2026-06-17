@@ -75,6 +75,14 @@ public class ExternalApiLogService {
         );
     }
 
+    public void logToolCall(String toolName, String input, String outputPreview) {
+        Map<String, Object> requestParams = new LinkedHashMap<>();
+        requestParams.put("toolName", toolName);
+        requestParams.put("input", input == null ? "" : input);
+        requestParams.put("outputPreview", preview(outputPreview));
+        save(null, null, "TOOL_CALL", toolName, requestParams, HTTP_OK, true);
+    }
+
     @Transactional
     public void logDebugProbe(
             String provider,

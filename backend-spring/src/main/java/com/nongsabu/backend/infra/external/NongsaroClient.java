@@ -1,5 +1,6 @@
 package com.nongsabu.backend.infra.external;
 
+import com.nongsabu.backend.domain.agri.dto.FarmDicResponse;
 import java.io.StringReader;
 import java.net.URI;
 import javax.xml.parsers.DocumentBuilder;
@@ -69,6 +70,42 @@ public class NongsaroClient {
         } catch (Exception e) {
             log.warn("농사로 API 호출 실패: {}", e.getMessage());
             return word + " 농사로 정보를 현재 가져올 수 없습니다. (" + e.getMessage() + ")";
+        }
+    }
+
+    // 구조화된 데이터 반환 (프론트엔드용)
+    public FarmDicResponse searchFarmDicStructured(String word) {
+        if (!isConfigured()) return FarmDicResponse.notFound(word);
+        try {
+            String searchUrl = UriComponentsBuilder.fromUri(URI.create("http://api.nongsaro.go.kr/service/farmDic/searchEqualWord"))
+                    .queryParam("apiKey", apiKey)
+                    .queryParam("word", word)
+                    .build().encode().toUriString();
+            String searchBody = webClient.get().uri(URI.create(searchUrl))
+                    .retrieve().bodyToMono(String.class).block();
+            if (searchBody == null || searchBody.isBlank()) return FarmDicResponse.notFound(word);
+
+            String wordNo = extractFirstWordNo(searchBody);
+            if (wordNo == null) return FarmDicResponse.notFound(word);
+
+            String detailUrl = UriComponentsBuilder.fromUri(URI.create("http://api.nongsaro.go.kr/service/farmDic/detailWord"))
+                    .queryParam("apiKey", apiKey)
+                    .queryParam("wordNo", wordNo)
+                    .build().encode().toUriString();
+            String detailBody = webClient.get().uri(URI.create(detailUrl))
+                    .retrieve().bodyToMono(String.class).block();
+            if (detailBody == null || detailBody.isBlank()) return FarmDicResponse.notFound(word);
+
+            Document doc = parse(detailBody);
+            NodeList items = doc.getElementsByTagName("item");
+            if (items.getLength() == 0) return FarmDicResponse.notFound(word);
+            String wordDc = getText((Element) items.item(0), "wordDc");
+            if (wordDc.isBlank()) return FarmDicResponse.notFound(word);
+            String definition = wordDc.length() > 800 ? wordDc.substring(0, 800) + "..." : wordDc;
+            return new FarmDicResponse(word, wordNo, definition);
+        } catch (Exception e) {
+            log.warn("농사로 구조화 조회 실패: {}", e.getMessage());
+            return FarmDicResponse.notFound(word);
         }
     }
 

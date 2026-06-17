@@ -282,7 +282,7 @@ public class DebugIntegrationService {
         long started = System.nanoTime();
         try {
             ProbePayload payload = webClient.get()
-                    .uri(url)
+                    .uri(URI.create(url))
                     .exchangeToMono(response -> response.bodyToMono(String.class)
                             .defaultIfEmpty("")
                             .map(body -> new ProbePayload(response.statusCode(), body)))

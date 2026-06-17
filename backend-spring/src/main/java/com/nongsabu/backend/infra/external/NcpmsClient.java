@@ -2,7 +2,10 @@ package com.nongsabu.backend.infra.external;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nongsabu.backend.domain.agri.dto.DiseasePestResponse;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -55,6 +58,48 @@ public class NcpmsClient {
             log.warn("NCPMS API 호출 실패: {}", e.getMessage());
             return query + " 병해충 정보를 현재 가져올 수 없습니다. (" + e.getMessage() + ")";
         }
+    }
+
+    // 구조화된 데이터 반환 (프론트엔드용)
+    public DiseasePestResponse searchDiseasePestStructured(String query) {
+        if (!isConfigured()) return new DiseasePestResponse(query, 0, List.of());
+        try {
+            String url = UriComponentsBuilder.fromUri(URI.create("http://ncpms.rda.go.kr/npmsAPI/service"))
+                    .queryParam("apiKey", apiKey)
+                    .queryParam("serviceCode", "SVC16")
+                    .queryParam("searchName", query)
+                    .build().encode().toUriString();
+            String body = webClient.get().uri(URI.create(url))
+                    .retrieve().bodyToMono(String.class).block();
+            if (body == null || body.isBlank()) return new DiseasePestResponse(query, 0, List.of());
+            return parseStructured(body, query);
+        } catch (Exception e) {
+            log.warn("NCPMS 구조화 조회 실패: {}", e.getMessage());
+            return new DiseasePestResponse(query, 0, List.of());
+        }
+    }
+
+    private DiseasePestResponse parseStructured(String json, String query) throws Exception {
+        JsonNode root = objectMapper.readTree(json);
+        JsonNode service = root.path("service");
+        if (service.isMissingNode()) return new DiseasePestResponse(query, 0, List.of());
+
+        int totalCount = service.path("totalCount").asInt(0);
+        JsonNode list = service.path("list");
+        List<DiseasePestResponse.Item> items = new ArrayList<>();
+        if (list.isArray()) {
+            for (JsonNode item : list) {
+                items.add(new DiseasePestResponse.Item(
+                        item.path("korName").asText(""),
+                        item.path("divName").asText(""),
+                        item.path("cropName").asText(""),
+                        item.path("oprName").asText(""),
+                        item.path("thumbImg").asText(""),
+                        item.path("detailUrl").asText("")
+                ));
+            }
+        }
+        return new DiseasePestResponse(query, totalCount, items);
     }
 
     // NCPMS SVC16 응답 형식: {"service":{"list":[{"korName":"...","divName":"...","cropName":"...","oprName":"..."}]}}
