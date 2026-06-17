@@ -26,6 +26,8 @@ import com.nongsabu.backend.infra.ai.FastApiAnalysisClient;
 import com.nongsabu.backend.infra.ai.dto.AiAnalysisResponse;
 import com.nongsabu.backend.infra.storage.LocalStorageService;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +36,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @ExtendWith(MockitoExtension.class)
@@ -159,15 +162,42 @@ class ImageAnalysisServiceTest {
         var grape = crop(10L, "\uD3EC\uB3C4");
         UploadedImage image = uploadedImage(100L, member, grape, AnalysisStatus.COMPLETED);
         ImageAnalysisResult result = imageAnalysisResult(200L, image);
+        ReflectionTestUtils.setField(image, "createdAt", LocalDateTime.of(2026, 6, 17, 10, 0));
         given(uploadedImageRepository.findByIdAndMemberId(100L, 1L)).willReturn(Optional.of(image));
         given(imageAnalysisResultRepository.findByUploadedImageId(100L)).willReturn(Optional.of(result));
 
         AnalysisResponse response = imageAnalysisService.getAnalysis(1L, 100L);
 
         assertThat(response.imageId()).isEqualTo(100L);
+        assertThat(response.createdAt()).isEqualTo(LocalDateTime.of(2026, 6, 17, 10, 0));
         assertThat(response.status()).isEqualTo(AnalysisStatus.COMPLETED.name());
         assertThat(response.supported()).isTrue();
         assertThat(response.diseaseName()).isEqualTo("Grape disease suspicion");
+    }
+
+    @Test
+    void getAnalysesReturnsNewestImagesFirst() {
+        var member = member(1L);
+        var grape = crop(10L, "\uD3EC\uB3C4");
+        UploadedImage newestImage = uploadedImage(200L, member, grape, AnalysisStatus.COMPLETED);
+        UploadedImage olderImage = uploadedImage(100L, member, grape, AnalysisStatus.UNSUPPORTED);
+        ImageAnalysisResult newestResult = imageAnalysisResult(300L, newestImage);
+        ImageAnalysisResult olderResult = imageAnalysisResult(400L, olderImage);
+        ReflectionTestUtils.setField(newestImage, "createdAt", LocalDateTime.of(2026, 6, 17, 11, 0));
+        ReflectionTestUtils.setField(olderImage, "createdAt", LocalDateTime.of(2026, 6, 16, 9, 30));
+
+        given(uploadedImageRepository.findAllByMemberIdOrderByCreatedAtDesc(1L))
+                .willReturn(List.of(newestImage, olderImage));
+        given(imageAnalysisResultRepository.findAllByUploadedImageIdIn(List.of(200L, 100L)))
+                .willReturn(List.of(newestResult, olderResult));
+
+        List<AnalysisResponse> responses = imageAnalysisService.getAnalyses(1L);
+
+        assertThat(responses).hasSize(2);
+        assertThat(responses.get(0).imageId()).isEqualTo(200L);
+        assertThat(responses.get(0).createdAt()).isEqualTo(LocalDateTime.of(2026, 6, 17, 11, 0));
+        assertThat(responses.get(1).imageId()).isEqualTo(100L);
+        assertThat(responses.get(1).status()).isEqualTo(AnalysisStatus.UNSUPPORTED.name());
     }
 
     @Test
