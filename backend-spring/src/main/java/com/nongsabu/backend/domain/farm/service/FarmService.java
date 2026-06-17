@@ -39,6 +39,12 @@ public class FarmService {
     }
 
     @Transactional(readOnly = true)
+    public FarmResponse getPrimaryFarm(Long memberId) {
+        return FarmResponse.from(farmRepository.findFirstByMemberIdOrderByIdAsc(memberId)
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "등록된 농장을 찾을 수 없습니다.")));
+    }
+
+    @Transactional(readOnly = true)
     public FarmResponse getFarm(Long memberId, Long farmId) {
         return FarmResponse.from(getOwnedFarm(memberId, farmId));
     }
@@ -48,6 +54,16 @@ public class FarmService {
         Farm farm = getOwnedFarm(memberId, farmId);
         farm.update(request.name(), request.location(), request.cultivationArea(), request.notes());
         return FarmResponse.from(farm);
+    }
+
+    @Transactional
+    public FarmResponse upsertPrimaryFarm(Long memberId, FarmRequest request) {
+        return farmRepository.findFirstByMemberIdOrderByIdAsc(memberId)
+                .map(farm -> {
+                    farm.update(request.name(), request.location(), request.cultivationArea(), request.notes());
+                    return FarmResponse.from(farm);
+                })
+                .orElseGet(() -> createFarm(memberId, request));
     }
 
     @Transactional(readOnly = true)
