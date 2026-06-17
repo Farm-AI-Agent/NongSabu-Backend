@@ -76,6 +76,8 @@ app:
     top-k: ${APP_RAG_TOP_K:4}
     similarity-threshold: ${APP_RAG_SIMILARITY_THRESHOLD:0.35}
     hybrid-candidate-size: ${APP_RAG_HYBRID_CANDIDATE_SIZE:20}
+  llm:
+    enabled: ${APP_LLM_ENABLED:false}
   document:
     chunk-size: ${APP_DOCUMENT_CHUNK_SIZE:1200}
     chunk-overlap: ${APP_DOCUMENT_CHUNK_OVERLAP:200}

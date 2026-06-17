@@ -1,6 +1,7 @@
 package com.nongsabu.backend.domain.document.service;
 
 import com.nongsabu.backend.domain.document.dto.RagAnswerResponse;
+import com.nongsabu.backend.domain.document.dto.RagDiagnosticResponse;
 import com.nongsabu.backend.domain.document.dto.RagSearchItem;
 import com.nongsabu.backend.domain.document.dto.RagSearchResponse;
 import com.nongsabu.backend.infra.reranker.RerankerClient;
@@ -10,15 +11,18 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class RagService {
 
+    private static final String DIAGNOSTIC_QUERY = "RAG 연결 상태 확인";
     private static final String SYSTEM_PROMPT = """
             당신은 초보 농가를 돕는 농업 AI 비서입니다.
             검색된 문서 내용에 근거해 한국어로 명확하고 실용적으로 답하세요.
@@ -32,6 +36,8 @@ public class RagService {
     private final int defaultTopK;
     private final double similarityThreshold;
     private final int hybridCandidateSize;
+    private final String embeddingModel;
+    private final boolean llmEnabled;
 
     public RagService(
             VectorStore vectorStore,
@@ -40,7 +46,9 @@ public class RagService {
             ChatClient.Builder chatClientBuilder,
             @Value("${app.rag.top-k:4}") int topK,
             @Value("${app.rag.similarity-threshold:0.35}") double similarityThreshold,
-            @Value("${app.rag.hybrid-candidate-size:20}") int hybridCandidateSize
+            @Value("${app.rag.hybrid-candidate-size:20}") int hybridCandidateSize,
+            @Value("${app.embedding.model:text-embedding-3-small}") String embeddingModel,
+            @Value("${app.llm.enabled:false}") boolean llmEnabled
     ) {
         this.vectorStore = vectorStore;
         this.bm25SearchClient = bm25SearchClient;
@@ -49,6 +57,8 @@ public class RagService {
         this.defaultTopK = topK;
         this.similarityThreshold = similarityThreshold;
         this.hybridCandidateSize = hybridCandidateSize;
+        this.embeddingModel = embeddingModel;
+        this.llmEnabled = llmEnabled;
     }
 
     public RagSearchResponse search(Long memberId, String query, int requestedTopK) {
@@ -111,6 +121,10 @@ public class RagService {
             );
         }
 
+        if (!llmEnabled) {
+            return new RagAnswerResponse(question, buildFallbackAnswer(sources), sources);
+        }
+
         String context = sources.stream()
                 .map(item -> "[문서: %s, 청크: %d, 점수: %s]\n%s".formatted(
                         item.filename(),
@@ -121,26 +135,56 @@ public class RagService {
                 .reduce((left, right) -> left + "\n\n---\n\n" + right)
                 .orElse("");
 
-        String answer = chatClient.prompt()
-                .user("""
-                        다음 검색 문맥만 근거로 질문에 답하세요.
-                        문맥에 근거가 없으면 관련 정보를 찾을 수 없다고 답하세요.
+        try {
+            String answer = chatClient.prompt()
+                    .user("""
+                            다음 검색 문맥만 근거로 질문에 답하세요.
+                            문맥에 근거가 없으면 관련 정보를 찾을 수 없다고 답하세요.
 
-                        [검색 문맥]
-                        %s
+                            [검색 문맥]
+                            %s
 
-                        [질문]
-                        %s
-                        """.formatted(context, question))
-                .call()
-                .content();
-        return new RagAnswerResponse(question, answer, sources);
+                            [질문]
+                            %s
+                            """.formatted(context, question))
+                    .call()
+                    .content();
+            return new RagAnswerResponse(question, answer, sources);
+        } catch (RuntimeException exception) {
+            log.warn("RAG answer generation failed. Falling back to source summary.", exception);
+            return new RagAnswerResponse(question, buildFallbackAnswer(sources), sources);
+        }
     }
 
     public List<String> getContextSnippets(Long memberId, String query, int requestedTopK) {
         return search(memberId, query, requestedTopK).items().stream()
                 .map(RagSearchItem::content)
                 .toList();
+    }
+
+    public RagDiagnosticResponse diagnose(Long memberId) {
+        try {
+            int resultCount = search(memberId, DIAGNOSTIC_QUERY, 1).items().size();
+            return new RagDiagnosticResponse(
+                    true,
+                    "READY",
+                    "embedding과 검색 경로가 정상 응답했습니다.",
+                    embeddingModel,
+                    defaultTopK,
+                    similarityThreshold,
+                    resultCount
+            );
+        } catch (Exception exception) {
+            return new RagDiagnosticResponse(
+                    false,
+                    "FAILED",
+                    "RAG 검색 경로 확인에 실패했습니다: " + exception.getMessage(),
+                    embeddingModel,
+                    defaultTopK,
+                    similarityThreshold,
+                    0
+            );
+        }
     }
 
     private List<RagSearchItem> fuseByRrf(
@@ -181,6 +225,27 @@ public class RagService {
 
     private String memberFilter(Long memberId) {
         return "memberId == '" + memberId + "'";
+    }
+
+    private String buildFallbackAnswer(List<RagSearchItem> items) {
+        if (items.isEmpty()) {
+            return "업로드된 문서에서 관련 근거를 찾지 못했습니다. 농업 문서를 업로드한 뒤 다시 질문해주세요.";
+        }
+
+        String references = items.stream()
+                .map(item -> """
+                        [문서: %s / 청크: %d]
+                        %s
+                        """.formatted(item.filename(), item.chunkIndex(), item.content()))
+                .reduce((left, right) -> left + "\n---\n" + right)
+                .orElse("");
+
+        // OpenAI 키가 없거나 LLM 호출이 실패해도 검색 근거는 바로 확인할 수 있게 유지한다.
+        return """
+                현재 LLM 생성이 비활성화되어 있어 검색된 문서 근거를 우선 제공합니다.
+
+                %s
+                """.formatted(references);
     }
 
     private record ScoredSearchItem(RagSearchItem item, double score, Integer denseRank, Integer bm25Rank) {

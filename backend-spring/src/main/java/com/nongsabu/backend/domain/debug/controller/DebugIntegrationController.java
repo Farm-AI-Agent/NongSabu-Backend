@@ -1,6 +1,7 @@
 package com.nongsabu.backend.domain.debug.controller;
 
 import com.nongsabu.backend.common.api.ApiResponse;
+import com.nongsabu.backend.common.exception.BusinessException;
 import com.nongsabu.backend.domain.debug.dto.DebugIntegrationStatusResponse;
 import com.nongsabu.backend.domain.debug.dto.DebugProbeResponse;
 import com.nongsabu.backend.domain.debug.dto.DebugToolInvokeRequest;
@@ -11,6 +12,7 @@ import com.nongsabu.backend.security.CustomUserDetails;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -48,6 +50,9 @@ public class DebugIntegrationController {
             @AuthenticationPrincipal CustomUserDetails principal,
             @RequestBody DebugToolInvokeRequest request
     ) {
+        if (principal == null) {
+            throw new BusinessException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.");
+        }
         return ApiResponse.ok("Debug tool invocation completed.", debugIntegrationService.invoke(principal.id(), request));
     }
 

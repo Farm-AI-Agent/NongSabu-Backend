@@ -2,6 +2,7 @@ package com.nongsabu.backend.infra.ai.tool;
 
 import com.nongsabu.backend.domain.externalapilog.service.ExternalApiLogService;
 import com.nongsabu.backend.infra.external.Gov24Client;
+import com.nongsabu.backend.infra.external.KamisClient;
 import com.nongsabu.backend.infra.external.NcpmsClient;
 import com.nongsabu.backend.infra.external.NongsaroClient;
 import com.nongsabu.backend.infra.external.YoungFarmerClient;
@@ -14,11 +15,21 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class AgriToolService {
 
+    private final KamisClient kamisClient;
     private final NongsaroClient nongsaroClient;
     private final NcpmsClient ncpmsClient;
     private final Gov24Client gov24Client;
     private final YoungFarmerClient youngFarmerClient;
     private final ExternalApiLogService externalApiLogService;
+
+    @Tool(name = "getMarketPrice", description = "KAMIS에서 농산물 가격과 시세 정보를 조회합니다.")
+    public String getMarketPrice(
+            @ToolParam(description = "조회할 작물 또는 품목 이름 (예: 사과, 배추, 포도)") String cropName
+    ) {
+        String result = kamisClient.getMarketSnapshot(cropName);
+        safeLog("getMarketPrice", cropName, result);
+        return result;
+    }
 
     @Tool(name = "searchFarmDictionary", description = "농사로 농업용어사전에서 농업 용어, 재배 방법, 작물 정보를 조회합니다.")
     public String searchFarmDictionary(

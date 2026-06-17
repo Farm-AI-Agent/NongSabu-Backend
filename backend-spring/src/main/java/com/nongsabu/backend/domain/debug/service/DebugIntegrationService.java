@@ -102,7 +102,7 @@ public class DebugIntegrationService {
             case "kamis" -> kamisProbe();
             case "ncpms" -> ncpmsProbe();
             case "nongsaro" -> nongsaroProbe();
-            case "gov_service", "gov" -> govServiceProbe();
+            case "gov_service", "govservice", "gov" -> govServiceProbe();
             case "young_farmer", "youngfarmer" -> youngFarmerProbe();
             default -> throw new IllegalArgumentException("Unknown probe target: " + target);
         };
@@ -282,7 +282,7 @@ public class DebugIntegrationService {
         long started = System.nanoTime();
         try {
             ProbePayload payload = webClient.get()
-                    .uri(URI.create(url))
+                    .uri(url)
                     .exchangeToMono(response -> response.bodyToMono(String.class)
                             .defaultIfEmpty("")
                             .map(body -> new ProbePayload(response.statusCode(), body)))
