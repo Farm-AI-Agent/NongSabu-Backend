@@ -4,8 +4,8 @@ services:
     container_name: farm-ai-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-farm_ai}
       POSTGRES_USER: ${POSTGRES_USER:-farm_user}
+      POSTGRES_DB: ${POSTGRES_DB:-farm_ai}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-farm_password}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
