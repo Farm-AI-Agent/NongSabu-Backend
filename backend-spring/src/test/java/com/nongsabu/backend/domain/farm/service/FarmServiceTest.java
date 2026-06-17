@@ -59,6 +59,16 @@ class FarmServiceTest {
     }
 
     @Test
+    void getPrimaryFarmReturnsFirstOwnedFarm() {
+        given(farmRepository.findFirstByMemberIdOrderByIdAsc(1L)).willReturn(Optional.of(farm(10L, member(1L))));
+
+        FarmResponse response = farmService.getPrimaryFarm(1L);
+
+        assertThat(response.id()).isEqualTo(10L);
+        assertThat(response.name()).isEqualTo("farm-10");
+    }
+
+    @Test
     void updateFarmChangesOwnedFarm() {
         Farm farm = farm(10L, member(1L));
         given(farmRepository.findByIdAndMemberId(10L, 1L)).willReturn(Optional.of(farm));
@@ -72,6 +82,38 @@ class FarmServiceTest {
         assertThat(response.name()).isEqualTo("updated");
         assertThat(response.location()).isEqualTo("Jeju");
         assertThat(farm.getNotes()).isEqualTo("updated-notes");
+    }
+
+    @Test
+    void upsertPrimaryFarmCreatesWhenNoFarmExists() {
+        var member = member(1L);
+        given(farmRepository.findFirstByMemberIdOrderByIdAsc(1L)).willReturn(Optional.empty());
+        given(memberService.getMember(1L)).willReturn(member);
+        given(farmRepository.save(any(Farm.class))).willReturn(farm(10L, member));
+
+        FarmResponse response = farmService.upsertPrimaryFarm(
+                1L,
+                new FarmRequest("farm-10", "Naju", "greenhouse", "notes")
+        );
+
+        assertThat(response.id()).isEqualTo(10L);
+        assertThat(response.name()).isEqualTo("farm-10");
+    }
+
+    @Test
+    void upsertPrimaryFarmUpdatesExistingFarm() {
+        Farm existingFarm = farm(10L, member(1L));
+        given(farmRepository.findFirstByMemberIdOrderByIdAsc(1L)).willReturn(Optional.of(existingFarm));
+
+        FarmResponse response = farmService.upsertPrimaryFarm(
+                1L,
+                new FarmRequest("updated", "Jeju", "field", "updated-notes")
+        );
+
+        assertThat(response.id()).isEqualTo(10L);
+        assertThat(response.name()).isEqualTo("updated");
+        assertThat(existingFarm.getLocation()).isEqualTo("Jeju");
+        assertThat(existingFarm.getNotes()).isEqualTo("updated-notes");
     }
 
     @Test
