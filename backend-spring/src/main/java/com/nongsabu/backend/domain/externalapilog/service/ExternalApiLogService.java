@@ -6,9 +6,12 @@ import com.nongsabu.backend.domain.externalapilog.entity.ExternalApiLog;
 import com.nongsabu.backend.domain.externalapilog.repository.ExternalApiLogRepository;
 import com.nongsabu.backend.domain.member.entity.Member;
 import com.nongsabu.backend.domain.report.entity.AnalysisReport;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import jakarta.persistence.EntityManager;
+import org.springframework.data.domain.PageRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -73,6 +76,30 @@ public class ExternalApiLogService {
                 success ? HTTP_OK : HTTP_INTERNAL_ERROR,
                 success
         );
+    }
+
+    public List<Map<String, Object>> getRecentToolCallLogs(int limit) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        externalApiLogRepository
+                .findByProviderOrderByCreatedAtDesc("TOOL_CALL", PageRequest.of(0, limit))
+                .forEach(log -> {
+                    Map<String, Object> entry = new LinkedHashMap<>();
+                    try {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> params = objectMapper.readValue(log.getRequestParams(), Map.class);
+                        entry.put("toolName", params.getOrDefault("toolName", log.getEndpoint()));
+                        entry.put("input", params.getOrDefault("input", ""));
+                        entry.put("outputPreview", params.getOrDefault("outputPreview", ""));
+                    } catch (Exception e) {
+                        entry.put("toolName", log.getEndpoint());
+                        entry.put("input", "");
+                        entry.put("outputPreview", "");
+                    }
+                    entry.put("success", log.isSuccess());
+                    entry.put("createdAt", log.getCreatedAt().toString());
+                    result.add(entry);
+                });
+        return result;
     }
 
     public void logToolCall(String toolName, String input, String outputPreview) {
