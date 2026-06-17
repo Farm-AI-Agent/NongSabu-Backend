@@ -1,10 +1,10 @@
 package com.nongsabu.backend.infra.ai.llm;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 
 @Component
-@ConditionalOnMissingBean(LlmClient.class)
+@ConditionalOnProperty(prefix = "app.llm", name = "enabled", havingValue = "false", matchIfMissing = true)
 public class StubLlmClient implements LlmClient {
 
     @Override
