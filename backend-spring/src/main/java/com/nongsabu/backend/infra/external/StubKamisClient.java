@@ -1,8 +1,5 @@
 package com.nongsabu.backend.infra.external;
 
-import org.springframework.stereotype.Component;
-
-@Component
 public class StubKamisClient implements KamisClient {
 
     @Override
