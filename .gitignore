@@ -1,6 +1,9 @@
 .gradle/
 build/
 out/
+.env
+.env.*
+!.env.example
 .idea/
 *.iml
 backend-spring/.gradle/
