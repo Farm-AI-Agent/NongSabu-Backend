@@ -79,7 +79,7 @@ public class ReportService {
                 llmResult.errorMessage()
         );
 
-        DiseaseGuidanceResponse diseaseGuidance = buildDiseaseGuidance(result, ragContext);
+        DiseaseGuidanceResponse diseaseGuidance = refineDiseaseGuidance(buildDiseaseGuidance(result, ragContext));
         return AnalysisReportResponse.from(report, result.getDiseaseName(), diseaseGuidance);
     }
 
@@ -218,6 +218,107 @@ public class ReportService {
                 treatment,
                 StringUtils.isBlank(ragContext) ? null : ragContext
         );
+    }
+
+    private DiseaseGuidanceResponse refineDiseaseGuidance(DiseaseGuidanceResponse draft) {
+        if (draft == null || StringUtils.isBlank(draft.ragContext())) {
+            return draft;
+        }
+        String prompt = """
+                포도 병해 진단 결과와 RAG 문서 근거를 바탕으로 프론트에 바로 보여줄 병해 안내문을 작성하세요.
+                반드시 아래 세 섹션 제목을 그대로 사용하고, 각 섹션은 초보 농가가 이해하기 쉬운 한국어 2~4문장으로 정리하세요.
+                문서 근거에 없는 내용은 추측하지 말고, 불확실하면 전문가 상담 권고를 포함하세요.
+
+                [병 정보]
+                [발병 원인]
+                [해결 방안]
+                """;
+        String context = """
+                진단명: %s
+
+                초안 병 정보:
+                %s
+
+                초안 발병 원인:
+                %s
+
+                초안 해결 방안:
+                %s
+
+                RAG 문서 근거:
+                %s
+                """.formatted(
+                draft.diseaseName(),
+                draft.diseaseInfo(),
+                draft.outbreakCause(),
+                draft.treatment(),
+                draft.ragContext()
+        );
+
+        try {
+            String generated = llmClient.generate(prompt, context);
+            if (StringUtils.isBlank(generated)) {
+                return draft;
+            }
+            return new DiseaseGuidanceResponse(
+                    draft.diseaseName(),
+                    sectionOrFallback(generated, "병 정보", draft.diseaseInfo()),
+                    sectionOrFallback(generated, "발병 원인", draft.outbreakCause()),
+                    sectionOrFallback(generated, "해결 방안", draft.treatment()),
+                    draft.ragContext()
+            );
+        } catch (RuntimeException exception) {
+            return draft;
+        }
+    }
+
+    private String sectionOrFallback(String text, String sectionTitle, String fallback) {
+        String extracted = extractSection(text, sectionTitle);
+        return StringUtils.isBlank(extracted) ? fallback : extracted;
+    }
+
+    private String extractSection(String text, String sectionTitle) {
+        if (StringUtils.isBlank(text) || StringUtils.isBlank(sectionTitle)) {
+            return "";
+        }
+        String currentSection = null;
+        StringBuilder result = new StringBuilder();
+        for (String rawLine : text.lines().toList()) {
+            String line = rawLine.trim();
+            String normalizedTitle = normalizeSectionTitle(line);
+            if (normalizedTitle != null) {
+                if (sectionTitle.equals(normalizedTitle)) {
+                    currentSection = normalizedTitle;
+                    continue;
+                }
+                if (sectionTitle.equals(currentSection)) {
+                    break;
+                }
+                currentSection = normalizedTitle;
+                continue;
+            }
+            if (sectionTitle.equals(currentSection) && StringUtils.isNotBlank(line)) {
+                if (!result.isEmpty()) {
+                    result.append('\n');
+                }
+                result.append(line);
+            }
+        }
+        return result.toString().trim();
+    }
+
+    private String normalizeSectionTitle(String line) {
+        String normalized = line
+                .replace("#", "")
+                .replace("*", "")
+                .replace(":", "")
+                .replace("[", "")
+                .replace("]", "")
+                .trim();
+        if (List.of("병 정보", "발병 원인", "해결 방안").contains(normalized)) {
+            return normalized;
+        }
+        return null;
     }
 
     private String extractByKeywords(String text, List<String> keywords, String fallback) {
