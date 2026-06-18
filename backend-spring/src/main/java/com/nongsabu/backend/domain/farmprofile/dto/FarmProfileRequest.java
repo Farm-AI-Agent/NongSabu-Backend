@@ -1,20 +1,54 @@
 package com.nongsabu.backend.domain.farmprofile.dto;
 
 import com.nongsabu.backend.domain.farmprofile.entity.ExperienceLevel;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 public record FarmProfileRequest(
-        @NotBlank(message = "지역을 입력해주세요.")
         String region,
-
-        @NotNull(message = "농사 경험 수준을 선택해주세요.")
         ExperienceLevel experienceLevel,
-
-        @NotBlank(message = "농장 규모를 입력해주세요.")
         String farmSize,
-
-        @NotNull(message = "대표 작물 ID를 입력해주세요.")
-        Long mainCropId
+        Long mainCropId,
+        Integer age,
+        Boolean youngFarmerEligible,
+        Integer farmingStartYear,
+        String farmingType,
+        String residenceRegion,
+        String farmlandRegion,
+        String primaryCropName,
+        String secondaryCropNames,
+        String cultivationArea,
+        String cultivationType,
+        String applicantType,
+        Boolean registeredFarmBusiness,
+        String annualSalesRange,
+        String desiredSupportTypes,
+        Boolean selfContributionAvailable,
+        String receivedPolicyNames,
+        String applicationPeriodPreference
 ) {
+
+    public FarmProfileRequest(String region, ExperienceLevel experienceLevel, String farmSize, Long mainCropId) {
+        this(
+                region,
+                experienceLevel,
+                farmSize,
+                mainCropId,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+    }
 }

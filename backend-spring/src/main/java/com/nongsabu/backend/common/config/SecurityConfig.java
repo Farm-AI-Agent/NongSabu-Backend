@@ -46,6 +46,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/debug/**",
+                                "/api/v1/policies/admin/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
@@ -55,6 +56,7 @@ public class SecurityConfig {
                                 "/rag-test.html",
                                 "/tool-api-debug.html",
                                 "/frontend-mock-test.html",
+                                "/policy-admin-test.html",
                                 "/chatbot-test.html",
                                 "/favicon.ico"
                         ).permitAll()

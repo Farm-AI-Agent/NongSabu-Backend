@@ -67,6 +67,48 @@ class FarmProfileServiceTest {
     }
 
     @Test
+    void createFarmProfileAllowsSkippedOnboardingFields() {
+        var member = member(1L);
+        FarmProfileRequest request = new FarmProfileRequest(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        FarmProfile saved = FarmProfile.builder()
+                .id(1L)
+                .member(member)
+                .build();
+
+        given(farmProfileRepository.findByMemberId(1L)).willReturn(Optional.empty());
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+        given(farmProfileRepository.save(any(FarmProfile.class))).willReturn(saved);
+
+        FarmProfileDto response = farmProfileService.create(1L, request);
+
+        assertThat(response.memberId()).isEqualTo(1L);
+        assertThat(response.mainCropId()).isNull();
+        assertThat(response.experienceLevel()).isNull();
+    }
+
+    @Test
     void updateFarmProfileChangesExistingProfile() {
         FarmProfile profile = farmProfile(1L, member(1L));
         given(farmProfileRepository.findByMemberId(1L)).willReturn(Optional.of(profile));
