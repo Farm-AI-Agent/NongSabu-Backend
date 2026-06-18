@@ -31,7 +31,7 @@ public class FarmProfileService {
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
-        Crop mainCrop = getCrop(request.mainCropId());
+        Crop mainCrop = getCropOrNull(request.mainCropId());
 
         FarmProfile farmProfile = farmProfileRepository.save(FarmProfile.builder()
                 .member(member)
@@ -39,6 +39,23 @@ public class FarmProfileService {
                 .experienceLevel(request.experienceLevel())
                 .farmSize(request.farmSize())
                 .mainCrop(mainCrop)
+                .age(request.age())
+                .youngFarmerEligible(request.youngFarmerEligible())
+                .farmingStartYear(request.farmingStartYear())
+                .farmingType(request.farmingType())
+                .residenceRegion(request.residenceRegion())
+                .farmlandRegion(request.farmlandRegion())
+                .primaryCropName(request.primaryCropName())
+                .secondaryCropNames(request.secondaryCropNames())
+                .cultivationArea(request.cultivationArea())
+                .cultivationType(request.cultivationType())
+                .applicantType(request.applicantType())
+                .registeredFarmBusiness(request.registeredFarmBusiness())
+                .annualSalesRange(request.annualSalesRange())
+                .desiredSupportTypes(request.desiredSupportTypes())
+                .selfContributionAvailable(request.selfContributionAvailable())
+                .receivedPolicyNames(request.receivedPolicyNames())
+                .applicationPeriodPreference(request.applicationPeriodPreference())
                 .build());
         return FarmProfileDto.from(farmProfile);
     }
@@ -51,8 +68,30 @@ public class FarmProfileService {
     @Transactional
     public FarmProfileDto update(Long memberId, FarmProfileRequest request) {
         FarmProfile farmProfile = getOwnedProfile(memberId);
-        Crop mainCrop = getCrop(request.mainCropId());
-        farmProfile.update(request.region(), request.experienceLevel(), request.farmSize(), mainCrop);
+        Crop mainCrop = getCropOrNull(request.mainCropId());
+        farmProfile.update(
+                request.region(),
+                request.experienceLevel(),
+                request.farmSize(),
+                mainCrop,
+                request.age(),
+                request.youngFarmerEligible(),
+                request.farmingStartYear(),
+                request.farmingType(),
+                request.residenceRegion(),
+                request.farmlandRegion(),
+                request.primaryCropName(),
+                request.secondaryCropNames(),
+                request.cultivationArea(),
+                request.cultivationType(),
+                request.applicantType(),
+                request.registeredFarmBusiness(),
+                request.annualSalesRange(),
+                request.desiredSupportTypes(),
+                request.selfContributionAvailable(),
+                request.receivedPolicyNames(),
+                request.applicationPeriodPreference()
+        );
         return FarmProfileDto.from(farmProfile);
     }
 
@@ -61,7 +100,10 @@ public class FarmProfileService {
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "농장 프로필을 찾을 수 없습니다."));
     }
 
-    private Crop getCrop(Long cropId) {
+    private Crop getCropOrNull(Long cropId) {
+        if (cropId == null) {
+            return null;
+        }
         return cropRepository.findById(cropId)
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "작물을 찾을 수 없습니다."));
     }

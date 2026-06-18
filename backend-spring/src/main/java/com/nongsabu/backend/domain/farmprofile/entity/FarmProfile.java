@@ -52,10 +52,100 @@ public class FarmProfile extends BaseEntity {
     @JoinColumn(name = "main_crop_id")
     private Crop mainCrop;
 
-    public void update(String region, ExperienceLevel experienceLevel, String farmSize, Crop mainCrop) {
+    @Column(name = "age")
+    private Integer age;
+
+    @Column(name = "young_farmer_eligible")
+    private Boolean youngFarmerEligible;
+
+    @Column(name = "farming_start_year")
+    private Integer farmingStartYear;
+
+    @Column(name = "farming_type", length = 50)
+    private String farmingType;
+
+    @Column(name = "residence_region", length = 120)
+    private String residenceRegion;
+
+    @Column(name = "farmland_region", length = 120)
+    private String farmlandRegion;
+
+    @Column(name = "primary_crop_name", length = 100)
+    private String primaryCropName;
+
+    @Column(name = "secondary_crop_names", length = 500)
+    private String secondaryCropNames;
+
+    @Column(name = "cultivation_area", length = 100)
+    private String cultivationArea;
+
+    @Column(name = "cultivation_type", length = 50)
+    private String cultivationType;
+
+    @Column(name = "applicant_type", length = 50)
+    private String applicantType;
+
+    @Column(name = "registered_farm_business")
+    private Boolean registeredFarmBusiness;
+
+    @Column(name = "annual_sales_range", length = 100)
+    private String annualSalesRange;
+
+    @Column(name = "desired_support_types", length = 500)
+    private String desiredSupportTypes;
+
+    @Column(name = "self_contribution_available")
+    private Boolean selfContributionAvailable;
+
+    @Column(name = "received_policy_names", length = 1000)
+    private String receivedPolicyNames;
+
+    @Column(name = "application_period_preference", length = 100)
+    private String applicationPeriodPreference;
+
+    public void update(
+            String region,
+            ExperienceLevel experienceLevel,
+            String farmSize,
+            Crop mainCrop,
+            Integer age,
+            Boolean youngFarmerEligible,
+            Integer farmingStartYear,
+            String farmingType,
+            String residenceRegion,
+            String farmlandRegion,
+            String primaryCropName,
+            String secondaryCropNames,
+            String cultivationArea,
+            String cultivationType,
+            String applicantType,
+            Boolean registeredFarmBusiness,
+            String annualSalesRange,
+            String desiredSupportTypes,
+            Boolean selfContributionAvailable,
+            String receivedPolicyNames,
+            String applicationPeriodPreference
+    ) {
         this.region = region;
         this.experienceLevel = experienceLevel;
         this.farmSize = farmSize;
         this.mainCrop = mainCrop;
+        this.age = age;
+        this.youngFarmerEligible = youngFarmerEligible;
+        this.farmingStartYear = farmingStartYear;
+        this.farmingType = farmingType;
+        this.residenceRegion = residenceRegion;
+        this.farmlandRegion = farmlandRegion;
+        this.primaryCropName = primaryCropName;
+        this.secondaryCropNames = secondaryCropNames;
+        this.cultivationArea = cultivationArea;
+        this.cultivationType = cultivationType;
+        this.applicantType = applicantType;
+        this.registeredFarmBusiness = registeredFarmBusiness;
+        this.annualSalesRange = annualSalesRange;
+        this.desiredSupportTypes = desiredSupportTypes;
+        this.selfContributionAvailable = selfContributionAvailable;
+        this.receivedPolicyNames = receivedPolicyNames;
+        this.applicationPeriodPreference = applicationPeriodPreference;
     }
 }
