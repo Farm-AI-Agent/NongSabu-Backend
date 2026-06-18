@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nongsabu.backend.domain.agri.dto.YoungFarmerResponse;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -42,8 +43,9 @@ public class YoungFarmerClient {
         }
         try {
             String url = buildUrl(keyword, page, rowCnt);
-            String body = webClient.get().uri(URI.create(url))
-                    .retrieve().bodyToMono(String.class).block();
+            byte[] responseBytes = webClient.get().uri(URI.create(url))
+                    .retrieve().bodyToMono(byte[].class).block();
+            String body = responseBytes == null ? null : new String(responseBytes, StandardCharsets.UTF_8);
             if (body == null || body.isBlank()) {
                 return new YoungFarmerResponse(page, 0, 0, List.of());
             }
@@ -109,21 +111,47 @@ public class YoungFarmerClient {
         List<YoungFarmerResponse.Item> items = new ArrayList<>();
         if (list.isArray()) {
             for (JsonNode node : list) {
-                String contents = node.path("contents").asText("");
-                String summary = contents.length() > 200 ? contents.substring(0, 200) + "..." : contents;
+                String contents = cleanText(node.path("contents").asText(""));
+                String summary = contents.length() > 2000 ? contents.substring(0, 2000) + "..." : contents;
                 items.add(new YoungFarmerResponse.Item(
-                        node.path("seq").asText(""),
-                        node.path("title").asText(""),
+                        cleanText(node.path("seq").asText("")),
+                        cleanText(node.path("title").asText("")),
                         summary,
-                        node.path("applStDt").asText(""),
-                        node.path("applEdDt").asText(""),
-                        node.path("area1Nm").asText(""),
-                        node.path("chargeAgency").asText(""),
-                        node.path("chargeTel").asText(""),
-                        node.path("infoUrl").asText("")
+                        cleanText(node.path("applStDt").asText("")),
+                        cleanText(node.path("applEdDt").asText("")),
+                        cleanText(node.path("area1Nm").asText("")),
+                        cleanText(node.path("chargeAgency").asText("")),
+                        cleanText(node.path("chargeTel").asText("")),
+                        cleanText(node.path("infoUrl").asText(""))
                 ));
             }
         }
         return new YoungFarmerResponse(page, totalCount, lastPage, items);
+    }
+
+    private String cleanText(String value) {
+        if (value == null || value.isBlank() || !looksLikeMojibake(value)) {
+            return value;
+        }
+        String repaired = new String(value.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+        return suspiciousScore(repaired) < suspiciousScore(value) ? repaired : value;
+    }
+
+    private boolean looksLikeMojibake(String value) {
+        return suspiciousScore(value) >= 2;
+    }
+
+    private int suspiciousScore(String value) {
+        int score = 0;
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+            if (ch == 'ì' || ch == 'ë' || ch == 'í' || ch == 'ê' || ch == 'ã' || ch == '\uFFFD') {
+                score++;
+            }
+            if (Character.isISOControl(ch) && !Character.isWhitespace(ch)) {
+                score++;
+            }
+        }
+        return score;
     }
 }

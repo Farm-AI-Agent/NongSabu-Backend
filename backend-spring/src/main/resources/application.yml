@@ -76,6 +76,9 @@ app:
     top-k: ${APP_RAG_TOP_K:4}
     similarity-threshold: ${APP_RAG_SIMILARITY_THRESHOLD:0.35}
     hybrid-candidate-size: ${APP_RAG_HYBRID_CANDIDATE_SIZE:20}
+  policy:
+    similarity-threshold: ${APP_POLICY_SIMILARITY_THRESHOLD:0.25}
+    admin-password: ${POLICY_ADMIN_PASSWORD:policy-admin-local}
   llm:
     enabled: ${APP_LLM_ENABLED:false}
   document:
