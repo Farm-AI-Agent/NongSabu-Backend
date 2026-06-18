@@ -2,6 +2,8 @@ package com.nongsabu.backend.domain.policy.service;
 
 import com.nongsabu.backend.domain.agri.dto.Gov24Response;
 import com.nongsabu.backend.domain.agri.dto.YoungFarmerResponse;
+import com.nongsabu.backend.common.exception.BusinessException;
+import com.nongsabu.backend.common.exception.ErrorCode;
 import com.nongsabu.backend.domain.farmprofile.entity.FarmProfile;
 import com.nongsabu.backend.domain.farmprofile.repository.FarmProfileRepository;
 import com.nongsabu.backend.domain.policy.dto.PolicyRecommendationRequest;
@@ -153,6 +155,13 @@ public class PolicySupportService {
                 )
                 .map(PolicySupportResponse::from);
         return PolicyPageResponse.from(result);
+    }
+
+    @Transactional(readOnly = true)
+    public PolicySupportResponse get(Long id) {
+        return policySupportRepository.findById(id)
+                .map(PolicySupportResponse::from)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "정책 정보를 찾을 수 없습니다."));
     }
 
     @Transactional(readOnly = true)
