@@ -28,6 +28,7 @@ import com.nongsabu.backend.infra.storage.LocalStorageService;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -101,6 +102,48 @@ class ImageAnalysisServiceTest {
         assertThat(response.severity()).isEqualTo("LOW");
         assertThat(image.getAnalysisStatus()).isEqualTo(AnalysisStatus.COMPLETED);
         verify(fastApiAnalysisClient).analyze(file);
+    }
+
+    @Test
+    void grapeImageReturnsDetectionsFromFastApiResponse() throws IOException {
+        var member = member(1L);
+        var grape = crop(10L, "\uD3EC\uB3C4");
+        UploadedImage image = uploadedImage(100L, member, grape, AnalysisStatus.PENDING);
+        MockMultipartFile file = imageFile();
+        AiAnalysisResponse aiResponse = new AiAnalysisResponse(
+                true,
+                "\uB178\uADE0\uBCD1",
+                0.91,
+                "HIGH",
+                "\uD3EC\uB3C4 \uC78E\uC5D0\uC11C \uB178\uADE0\uBCD1\uC774 \uD0D0\uC9C0\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+                "",
+                "yolo26-grape-onnx-v1",
+                List.of(new AiAnalysisResponse.Detection(
+                        "downy_mildew",
+                        "\uB178\uADE0\uBCD1",
+                        0.91,
+                        List.of(120.0, 80.0, 64.0, 70.0)
+                )),
+                1,
+                Map.of("width", 640, "height", 480)
+        );
+
+        given(cropRepository.findById(10L)).willReturn(Optional.of(grape));
+        given(memberService.getMember(1L)).willReturn(member);
+        given(localStorageService.store(eq("images"), eq(file))).willReturn("/uploads/images/leaf.jpg");
+        given(uploadedImageRepository.save(any(UploadedImage.class))).willReturn(image);
+        given(fastApiAnalysisClient.analyze(file)).willReturn(aiResponse);
+        given(imageAnalysisResultRepository.save(any(ImageAnalysisResult.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+
+        AnalysisResponse response = imageAnalysisService.uploadAndAnalyze(1L, 10L, file);
+
+        assertThat(response.detectionCount()).isEqualTo(1);
+        assertThat(response.imageSize()).containsEntry("width", 640).containsEntry("height", 480);
+        assertThat(response.detections()).hasSize(1);
+        assertThat(response.detections().get(0).className()).isEqualTo("downy_mildew");
+        assertThat(response.detections().get(0).label()).isEqualTo("\uB178\uADE0\uBCD1");
+        assertThat(response.detections().get(0).bbox()).containsExactly(120.0, 80.0, 64.0, 70.0);
     }
 
     @Test

@@ -34,6 +34,11 @@ public interface PolicySupportRepository extends JpaRepository<PolicySupport, Lo
                             OR LOWER(CAST(policy.title AS text)) LIKE LOWER(CONCAT('%', :keyword, '%'))
                             OR LOWER(CAST(COALESCE(policy.summary, '') AS text)) LIKE LOWER(CONCAT('%', :keyword, '%'))
                             OR LOWER(CAST(COALESCE(policy.target_group, '') AS text)) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                            OR LOWER(CAST(COALESCE(policy.region, '') AS text)) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                            OR LOWER(CAST(COALESCE(policy.category, '') AS text)) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                            OR LOWER(CAST(COALESCE(policy.application_period, '') AS text)) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                            OR LOWER(CAST(COALESCE(policy.department, '') AS text)) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                            OR LOWER(CAST(COALESCE(policy.content_text, '') AS text)) LIKE LOWER(CONCAT('%', :keyword, '%'))
                       )
                     ORDER BY policy.updated_at DESC
                     """,
@@ -48,6 +53,11 @@ public interface PolicySupportRepository extends JpaRepository<PolicySupport, Lo
                             OR LOWER(CAST(policy.title AS text)) LIKE LOWER(CONCAT('%', :keyword, '%'))
                             OR LOWER(CAST(COALESCE(policy.summary, '') AS text)) LIKE LOWER(CONCAT('%', :keyword, '%'))
                             OR LOWER(CAST(COALESCE(policy.target_group, '') AS text)) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                            OR LOWER(CAST(COALESCE(policy.region, '') AS text)) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                            OR LOWER(CAST(COALESCE(policy.category, '') AS text)) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                            OR LOWER(CAST(COALESCE(policy.application_period, '') AS text)) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                            OR LOWER(CAST(COALESCE(policy.department, '') AS text)) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                            OR LOWER(CAST(COALESCE(policy.content_text, '') AS text)) LIKE LOWER(CONCAT('%', :keyword, '%'))
                       )
                     """,
             nativeQuery = true
