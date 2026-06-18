@@ -36,40 +36,48 @@ class SupportProgramControllerTest {
 
     @Test
     void listUsesSupportProgramsCompatibilityPath() throws Exception {
-        given(policySupportService.search(0, 10, null, null, null, "청년"))
-                .willReturn(new PolicyPageResponse(
-                        0,
-                        10,
-                        1,
-                        1,
-                        List.of(policyResponse())
-                ));
+        given(policySupportService.search(0, 10, null, null, null, "young"))
+                .willReturn(pageResponse());
 
         mockMvc.perform(get("/api/v1/support-programs")
                         .param("page", "0")
                         .param("size", "10")
-                        .param("keyword", "청년"))
+                        .param("keyword", "young"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.items[0].title").value("청년농업인 영농정착지원사업"));
+                .andExpect(jsonPath("$.data.items[0].title").value("Young Farmer Settlement Support"));
 
-        verify(policySupportService).search(0, 10, null, null, null, "청년");
+        verify(policySupportService).search(0, 10, null, null, null, "young");
+    }
+
+    @Test
+    void listUsesPolicyProgramsCompatibilityPath() throws Exception {
+        given(policySupportService.search(0, 10, null, null, null, "young"))
+                .willReturn(pageResponse());
+
+        mockMvc.perform(get("/api/v1/policy-programs")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .param("keyword", "young"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.items[0].id").value(1));
     }
 
     @Test
     void recommendedUsesSupportProgramsCompatibilityPath() throws Exception {
         given(policySupportService.recommend(eq(null), any()))
                 .willReturn(new PolicyRecommendationResponse(
-                        "청년농",
+                        "young farmer",
                         List.of(policyResponse())
                 ));
 
         mockMvc.perform(get("/api/v1/support-programs/recommended")
-                        .param("query", "청년농")
+                        .param("query", "young farmer")
                         .param("topK", "3"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.items[0].title").value("청년농업인 영농정착지원사업"));
+                .andExpect(jsonPath("$.data.items[0].title").value("Young Farmer Settlement Support"));
     }
 
     @Test
@@ -79,7 +87,17 @@ class SupportProgramControllerTest {
         mockMvc.perform(get("/api/v1/support-programs/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.title").value("청년농업인 영농정착지원사업"));
+                .andExpect(jsonPath("$.data.title").value("Young Farmer Settlement Support"));
+    }
+
+    private PolicyPageResponse pageResponse() {
+        return new PolicyPageResponse(
+                0,
+                10,
+                1,
+                1,
+                List.of(policyResponse())
+        );
     }
 
     private PolicySupportResponse policyResponse() {
@@ -87,14 +105,14 @@ class SupportProgramControllerTest {
                 1L,
                 "YOUNG_FARMER",
                 "policy-1",
-                "청년농업인 영농정착지원사업",
-                "청년농업인의 안정적인 영농 정착을 지원합니다.",
-                "청년농업인",
-                "전국",
-                "정착지원",
-                "상시",
-                "온라인 신청",
-                "농림축산식품부",
+                "Young Farmer Settlement Support",
+                "Settlement support for young farmers.",
+                "young farmers",
+                "nationwide",
+                "settlement",
+                "always open",
+                "online",
+                "MAFRA",
                 "1234",
                 "https://example.com",
                 null

@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/support-programs")
+@RequestMapping({"/api/v1/support-programs", "/api/v1/policy-programs"})
 @RequiredArgsConstructor
 public class SupportProgramController {
 
