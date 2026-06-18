@@ -232,7 +232,18 @@
       </section>
 
       <section class="panel stack">
-        <h2>3. 정책 페이지 목록</h2>
+        <h2>3. RAG PDF 업로드</h2>
+        <p>관리자 PDF는 전역 RAG 문서로 임베딩되어 모든 사용자 리포트에서 검색됩니다.</p>
+        <div class="row">
+          <label>소유 회원 ID <input id="documentOwnerMemberId" type="number" min="1" value="1"></label>
+          <label>PDF 파일 <input id="documentFiles" type="file" accept="application/pdf" multiple></label>
+        </div>
+        <button id="uploadDocumentsButton">PDF 업로드 및 임베딩</button>
+        <pre id="documentOutput">대기 중</pre>
+      </section>
+
+      <section class="panel stack">
+        <h2>4. 정책 페이지 목록</h2>
         <div class="triple">
           <label>페이지 <input id="listPage" type="number" min="0" value="0"></label>
           <label>크기 <input id="listSize" type="number" min="1" max="100" value="20"></label>
@@ -255,7 +266,7 @@
       </section>
 
       <section class="panel stack">
-        <h2>4. 사용자 진입 시 추천</h2>
+        <h2>5. 사용자 진입 시 추천</h2>
         <div class="row">
           <label>Top K <input id="recommendTopK" type="number" min="1" max="20" value="5"></label>
           <label>지역 <input id="recommendRegion" placeholder="프로필 없을 때 보조 입력"></label>
@@ -299,7 +310,8 @@
 
   async function api(path, options = {}) {
     const headers = new Headers(options.headers || {});
-    if (options.body !== undefined) headers.set("Content-Type", "application/json");
+    const formBody = options.body instanceof FormData;
+    if (options.body !== undefined && !formBody) headers.set("Content-Type", "application/json");
     if (options.admin !== false && adminPassword()) {
       headers.set("X-Policy-Admin-Password", adminPassword());
     }
@@ -308,7 +320,7 @@
     const response = await fetch(url, {
       method: options.method || "GET",
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body)
+      body: options.body === undefined ? undefined : formBody ? options.body : JSON.stringify(options.body)
     });
     const elapsedMillis = Math.round(performance.now() - started);
     const payload = await response.json().catch(() => ({success: response.ok, data: null, message: ""}));
@@ -437,6 +449,32 @@
       output("#syncOutput", await api("/api/v1/policies/admin/embedding-status"));
     } catch (error) {
       output("#syncOutput", error.wrapped || error.message);
+    } finally {
+      event.target.disabled = false;
+    }
+  });
+
+  $("#uploadDocumentsButton").addEventListener("click", async event => {
+    event.target.disabled = true;
+    try {
+      const files = Array.from($("#documentFiles").files || []);
+      if (files.length === 0) {
+        output("#documentOutput", "PDF 파일을 선택하세요.");
+        return;
+      }
+
+      const ownerMemberId = $("#documentOwnerMemberId").value || "1";
+      const results = [];
+      for (const file of files) {
+        const form = new FormData();
+        form.append("ownerMemberId", ownerMemberId);
+        form.append("file", file);
+        const wrapped = await api("/api/v1/documents/admin/global", {method: "POST", body: form});
+        results.push({filename: file.name, result: wrapped});
+        output("#documentOutput", results);
+      }
+    } catch (error) {
+      output("#documentOutput", error.wrapped || error.message);
     } finally {
       event.target.disabled = false;
     }

@@ -8,12 +8,14 @@ import com.nongsabu.backend.domain.image.entity.UploadedImage;
 import com.nongsabu.backend.domain.image.repository.ImageAnalysisResultRepository;
 import com.nongsabu.backend.domain.image.repository.UploadedImageRepository;
 import com.nongsabu.backend.domain.report.dto.AnalysisReportResponse;
+import com.nongsabu.backend.domain.report.dto.AnalysisReportResponse.DiseaseGuidanceResponse;
 import com.nongsabu.backend.domain.report.entity.AnalysisReport;
 import com.nongsabu.backend.domain.report.entity.ReportStatus;
 import com.nongsabu.backend.domain.report.repository.ReportAnalysisReportRepository;
 import com.nongsabu.backend.infra.ai.llm.LlmClient;
 import com.nongsabu.backend.infra.external.KamisClient;
 import java.util.List;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
@@ -77,7 +79,8 @@ public class ReportService {
                 llmResult.errorMessage()
         );
 
-        return AnalysisReportResponse.from(report);
+        DiseaseGuidanceResponse diseaseGuidance = buildDiseaseGuidance(result, ragContext);
+        return AnalysisReportResponse.from(report, result.getDiseaseName(), diseaseGuidance);
     }
 
     private ExternalCallResult getMarketContext(String cropName) {
@@ -186,6 +189,76 @@ public class ReportService {
                 StringUtils.isBlank(ragContext) ? "관련 매뉴얼 문맥이 없습니다." : ragContext,
                 marketContext
         );
+    }
+
+    private DiseaseGuidanceResponse buildDiseaseGuidance(ImageAnalysisResult result, String ragContext) {
+        String diseaseName = fallback(result.getDiseaseName(), "진단명 없음");
+        String diseaseInfo = fallback(
+                result.getSummary(),
+                extractByKeywords(ragContext, List.of(diseaseName, "증상", "병징", "피해"), "RAG 근거에서 병 정보를 찾지 못했습니다.")
+        );
+        String outbreakCause = extractByKeywords(
+                ragContext,
+                List.of("원인", "발병", "발생", "환경", "조건", "습도", "강우", "비", "온도"),
+                "RAG 근거에서 발병 원인을 명확히 찾지 못했습니다."
+        );
+        String ragTreatment = extractByKeywords(
+                ragContext,
+                List.of("방제", "치료", "관리", "제거", "살포", "예방", "약제", "소독"),
+                ""
+        );
+        String treatment = joinGuidance(result.getRecommendation(), ragTreatment);
+        if (StringUtils.isBlank(treatment)) {
+            treatment = "RAG 근거에서 해결방안을 명확히 찾지 못했습니다. 지역 농업기술센터 또는 전문가 상담을 권장합니다.";
+        }
+        return new DiseaseGuidanceResponse(
+                diseaseName,
+                diseaseInfo,
+                outbreakCause,
+                treatment,
+                StringUtils.isBlank(ragContext) ? null : ragContext
+        );
+    }
+
+    private String extractByKeywords(String text, List<String> keywords, String fallback) {
+        if (StringUtils.isBlank(text)) {
+            return fallback;
+        }
+        List<String> normalizedKeywords = keywords.stream()
+                .filter(StringUtils::isNotBlank)
+                .map(keyword -> keyword.toLowerCase(Locale.ROOT))
+                .toList();
+        String result = text.lines()
+                .map(String::trim)
+                .filter(StringUtils::isNotBlank)
+                .filter(line -> containsAny(line, normalizedKeywords))
+                .distinct()
+                .limit(3)
+                .reduce((left, right) -> left + "\n" + right)
+                .orElse("");
+        if (StringUtils.isBlank(result)) {
+            return fallback;
+        }
+        return result.length() <= 1200 ? result : result.substring(0, 1200);
+    }
+
+    private boolean containsAny(String line, List<String> keywords) {
+        String normalized = line.toLowerCase(Locale.ROOT);
+        return keywords.stream().anyMatch(normalized::contains);
+    }
+
+    private String joinGuidance(String primary, String secondary) {
+        if (StringUtils.isBlank(primary)) {
+            return secondary;
+        }
+        if (StringUtils.isBlank(secondary)) {
+            return primary;
+        }
+        return primary.trim() + "\n" + secondary.trim();
+    }
+
+    private String fallback(String value, String fallback) {
+        return StringUtils.isBlank(value) ? fallback : value;
     }
 
     private record ExternalCallResult(String content, boolean success, String errorMessage) {

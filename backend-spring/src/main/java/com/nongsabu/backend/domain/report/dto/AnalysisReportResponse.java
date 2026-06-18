@@ -8,18 +8,38 @@ public record AnalysisReportResponse(
         String status,
         String reportText,
         String ragContext,
-        String externalMarketContext
+        String externalMarketContext,
+        String diseaseName,
+        DiseaseGuidanceResponse diseaseGuidance
 ) {
 
     public static AnalysisReportResponse from(AnalysisReport report) {
+        return from(report, null, null);
+    }
+
+    public static AnalysisReportResponse from(
+            AnalysisReport report,
+            String diseaseName,
+            DiseaseGuidanceResponse diseaseGuidance
+    ) {
         return new AnalysisReportResponse(
                 report.getId(),
                 report.getUploadedImage().getId(),
                 report.getStatus().name(),
                 report.getReportText(),
                 report.getRagContext(),
-                report.getExternalMarketContext()
+                report.getExternalMarketContext(),
+                diseaseName,
+                diseaseGuidance
         );
     }
-}
 
+    public record DiseaseGuidanceResponse(
+            String diseaseName,
+            String diseaseInfo,
+            String outbreakCause,
+            String treatment,
+            String ragContext
+    ) {
+    }
+}

@@ -224,7 +224,7 @@ public class RagService {
     }
 
     private String memberFilter(Long memberId) {
-        return "memberId == '" + memberId + "'";
+        return "memberId == '" + memberId + "' || scope == 'GLOBAL'";
     }
 
     private String buildFallbackAnswer(List<RagSearchItem> items) {

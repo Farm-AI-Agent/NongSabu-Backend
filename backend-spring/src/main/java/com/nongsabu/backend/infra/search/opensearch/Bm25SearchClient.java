@@ -35,11 +35,16 @@ public class Bm25SearchClient {
     }
 
     public void indexChunks(DocumentAsset asset, Long memberId, List<String> chunks) {
+        indexChunks(asset, memberId, chunks, "MEMBER");
+    }
+
+    public void indexChunks(DocumentAsset asset, Long memberId, List<String> chunks, String scope) {
         verifyIndexExists();
         for (int index = 0; index < chunks.size(); index++) {
             indexChunk(
                     asset.getId(),
                     memberId,
+                    scope,
                     index,
                     asset.getOriginalFilename(),
                     chunks.get(index),
@@ -59,7 +64,7 @@ public class Bm25SearchClient {
             String sectionPath
     ) {
         verifyIndexExists();
-        indexChunk(documentId, memberId, chunkIndex, filename, content, logicalId, sectionPath);
+        indexChunk(documentId, memberId, "MEMBER", chunkIndex, filename, content, logicalId, sectionPath);
     }
 
     public List<RagSearchItem> search(Long memberId, String query, int topK) {
@@ -67,7 +72,15 @@ public class Bm25SearchClient {
                 "size", Math.max(1, topK),
                 "query", Map.of(
                         "bool", Map.of(
-                                "filter", List.of(Map.of("term", Map.of("member_id", String.valueOf(memberId)))),
+                                "filter", List.of(Map.of(
+                                        "bool", Map.of(
+                                                "should", List.of(
+                                                        Map.of("term", Map.of("member_id", String.valueOf(memberId))),
+                                                        Map.of("term", Map.of("scope", "GLOBAL"))
+                                                ),
+                                                "minimum_should_match", 1
+                                        )
+                                )),
                                 "should", List.of(Map.of(
                                         "multi_match", Map.of(
                                                 "query", query,
@@ -104,6 +117,7 @@ public class Bm25SearchClient {
     private void indexChunk(
             Long documentId,
             Long memberId,
+            String scope,
             int chunkIndex,
             String filename,
             String content,
@@ -116,6 +130,7 @@ public class Bm25SearchClient {
         Map<String, Object> document = new LinkedHashMap<>();
         document.put("chunk_id", chunkId);
         document.put("member_id", String.valueOf(memberId));
+        document.put("scope", scope == null || scope.isBlank() ? "MEMBER" : scope);
         document.put("document_id", String.valueOf(documentId));
         document.put("chunk_index", chunkIndex);
         document.put("filename", safeFilename);
@@ -155,6 +170,7 @@ public class Bm25SearchClient {
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("chunk_id", Map.of("type", "keyword"));
         properties.put("member_id", Map.of("type", "keyword"));
+        properties.put("scope", Map.of("type", "keyword"));
         properties.put("document_id", Map.of("type", "keyword"));
         properties.put("chunk_index", Map.of("type", "integer"));
         properties.put("filename", Map.of("type", "keyword"));

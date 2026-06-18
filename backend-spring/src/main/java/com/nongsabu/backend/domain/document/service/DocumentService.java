@@ -32,6 +32,9 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class DocumentService {
 
+    private static final String SCOPE_MEMBER = "MEMBER";
+    private static final String SCOPE_GLOBAL = "GLOBAL";
+
     private final DocumentAssetRepository documentAssetRepository;
     private final DocumentChunkRepository documentChunkRepository;
     private final MemberService memberService;
@@ -46,13 +49,22 @@ public class DocumentService {
 
     @Transactional
     public DocumentUploadResponse upload(Long memberId, MultipartFile file) {
+        return upload(memberId, file, false);
+    }
+
+    @Transactional
+    public DocumentUploadResponse uploadGlobal(Long ownerMemberId, MultipartFile file) {
+        return upload(ownerMemberId, file, true);
+    }
+
+    private DocumentUploadResponse upload(Long memberId, MultipartFile file, boolean globalScope) {
         Member member = memberService.getMember(memberId);
         List<String> chunks = documentChunker.chunk(documentParser.parsePdf(file));
-        DocumentAsset asset = createAsset(member, file);
+        DocumentAsset asset = createAsset(member, file, globalScope);
 
         documentChunkRepository.saveAll(toDocumentChunks(asset, chunks));
-        vectorStore.add(toVectorDocuments(asset, memberId, chunks));
-        indexOpenSearch(asset, memberId, chunks);
+        vectorStore.add(toVectorDocuments(asset, memberId, chunks, globalScope));
+        indexOpenSearch(asset, memberId, chunks, globalScope);
         asset.updateParsingStatus(DocumentParsingStatus.PARSED);
 
         return DocumentUploadResponse.from(asset, chunks.size(), embeddingModel);
@@ -65,7 +77,7 @@ public class DocumentService {
                 .toList();
     }
 
-    private DocumentAsset createAsset(Member member, MultipartFile file) {
+    private DocumentAsset createAsset(Member member, MultipartFile file, boolean globalScope) {
         try {
             String storedPath = localStorageService.store("documents", file);
             return documentAssetRepository.save(DocumentAsset.builder()
@@ -73,7 +85,7 @@ public class DocumentService {
                     .originalFilename(file.getOriginalFilename() == null ? "unknown.pdf" : file.getOriginalFilename())
                     .storagePath(storedPath)
                     .contentType("application/pdf")
-                    .sourceType("manual-upload")
+                    .sourceType(globalScope ? "admin-global-upload" : "manual-upload")
                     .parsingStatus(DocumentParsingStatus.UPLOADED)
                     .build());
         } catch (IOException exception) {
@@ -81,12 +93,13 @@ public class DocumentService {
         }
     }
 
-    private List<Document> toVectorDocuments(DocumentAsset asset, Long memberId, List<String> chunks) {
+    private List<Document> toVectorDocuments(DocumentAsset asset, Long memberId, List<String> chunks, boolean globalScope) {
         return IntStream.range(0, chunks.size())
                 .mapToObj(index -> new Document(
                         chunks.get(index),
                         Map.of(
                                 "memberId", String.valueOf(memberId),
+                                "scope", globalScope ? SCOPE_GLOBAL : SCOPE_MEMBER,
                                 "documentId", String.valueOf(asset.getId()),
                                 "chunkIndex", index,
                                 "filename", asset.getOriginalFilename()
@@ -105,9 +118,9 @@ public class DocumentService {
                 .toList();
     }
 
-    private void indexOpenSearch(DocumentAsset asset, Long memberId, List<String> chunks) {
+    private void indexOpenSearch(DocumentAsset asset, Long memberId, List<String> chunks, boolean globalScope) {
         try {
-            bm25SearchClient.indexChunks(asset, memberId, chunks);
+            bm25SearchClient.indexChunks(asset, memberId, chunks, globalScope ? SCOPE_GLOBAL : SCOPE_MEMBER);
             asset.markOpenSearchIndexed();
         } catch (OpenSearchIndexingException exception) {
             log.warn("OpenSearch indexing failed. documentId={}, filename={}",

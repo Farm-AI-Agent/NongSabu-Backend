@@ -1,6 +1,7 @@
 package com.nongsabu.backend.domain.document.controller;
 
 import com.nongsabu.backend.common.api.ApiResponse;
+import com.nongsabu.backend.common.exception.BusinessException;
 import com.nongsabu.backend.domain.document.dto.DocumentSummaryResponse;
 import com.nongsabu.backend.domain.document.dto.DocumentUploadResponse;
 import com.nongsabu.backend.domain.document.dto.OpenSearchReindexResponse;
@@ -16,11 +17,14 @@ import com.nongsabu.backend.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,6 +37,9 @@ public class DocumentController {
     private final RagService ragService;
     private final OpenSearchReindexService openSearchReindexService;
 
+    @Value("${app.policy.admin-password:policy-admin-local}")
+    private String adminPassword;
+
     @PostMapping(value = "/api/v1/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<DocumentUploadResponse> upload(
             @AuthenticationPrincipal CustomUserDetails principal,
@@ -41,6 +48,19 @@ public class DocumentController {
         return ApiResponse.ok(
                 "PDF 업로드와 벡터 인덱싱이 완료되었습니다.",
                 documentService.upload(principal.id(), file)
+        );
+    }
+
+    @PostMapping(value = "/api/v1/documents/admin/global", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<DocumentUploadResponse> adminUploadGlobal(
+            @RequestHeader(name = "X-Policy-Admin-Password", required = false) String password,
+            @RequestParam(defaultValue = "1") Long ownerMemberId,
+            @RequestParam("file") MultipartFile file
+    ) {
+        verifyAdminPassword(password);
+        return ApiResponse.ok(
+                "Global RAG PDF upload and embedding completed.",
+                documentService.uploadGlobal(ownerMemberId, file)
         );
     }
 
@@ -89,5 +109,11 @@ public class DocumentController {
     ) {
         RagDiagnosticResponse response = ragService.diagnose(principal.id());
         return ApiResponse.ok(response.message(), response);
+    }
+
+    private void verifyAdminPassword(String password) {
+        if (password == null || password.isBlank() || !password.equals(adminPassword)) {
+            throw new BusinessException(HttpStatus.UNAUTHORIZED, "Invalid policy admin password.");
+        }
     }
 }

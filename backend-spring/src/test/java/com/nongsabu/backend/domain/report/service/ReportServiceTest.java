@@ -67,7 +67,10 @@ class ReportServiceTest {
         given(uploadedImageRepository.findByIdAndMemberId(100L, 1L)).willReturn(Optional.of(image));
         given(imageAnalysisResultRepository.findByUploadedImageId(100L)).willReturn(Optional.of(result));
         given(ragService.getContextSnippets(1L, "Grape disease suspicion summary", 3))
-                .willReturn(List.of("manual-context-1", "manual-context-2"));
+                .willReturn(List.of(
+                        "발병 원인: 고온다습한 환경과 강우 후 습도가 높을 때 발생이 늘어납니다.",
+                        "방제 방법: 병든 잎과 과실을 제거하고 등록 약제를 살포하세요."
+                ));
         given(kamisClient.getMarketSnapshot("grape")).willReturn("market-context");
         given(llmClient.generate(any(), any())).willReturn("llm-generated-report");
         given(analysisReportRepository.findByUploadedImageId(100L)).willReturn(Optional.empty());
@@ -88,9 +91,13 @@ class ReportServiceTest {
         assertThat(response.reportId()).isEqualTo(300L);
         assertThat(response.imageId()).isEqualTo(100L);
         assertThat(response.status()).isEqualTo(ReportStatus.GENERATED.name());
-        assertThat(response.ragContext()).contains("manual-context-1", "manual-context-2");
+        assertThat(response.ragContext()).contains("발병 원인", "방제 방법");
         assertThat(response.externalMarketContext()).isEqualTo("market-context");
         assertThat(response.reportText()).isEqualTo("llm-generated-report");
+        assertThat(response.diseaseName()).isEqualTo("Grape disease suspicion");
+        assertThat(response.diseaseGuidance().diseaseInfo()).isEqualTo("summary");
+        assertThat(response.diseaseGuidance().outbreakCause()).contains("고온다습한 환경");
+        assertThat(response.diseaseGuidance().treatment()).contains("recommendation", "등록 약제");
         verify(externalApiLogService).logKamisMarketSnapshot(1L, 300L, "grape", true, null);
         verify(externalApiLogService).logLlmGeneration(
                 eq(1L),

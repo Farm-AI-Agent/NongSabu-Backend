@@ -96,9 +96,40 @@ class DocumentServiceTest {
         assertThat(vectorDocuments.getValue()).hasSize(2);
         assertThat(vectorDocuments.getValue().get(0).getMetadata())
                 .containsEntry("memberId", "1")
+                .containsEntry("scope", "MEMBER")
                 .containsEntry("documentId", "10")
                 .containsEntry("chunkIndex", 0);
-        verify(bm25SearchClient).indexChunks(saved, 1L, List.of("chunk-1", "chunk-2"));
+        verify(bm25SearchClient).indexChunks(saved, 1L, List.of("chunk-1", "chunk-2"), "MEMBER");
+    }
+
+    @Test
+    void uploadGlobalAddsGlobalScopeToVectorAndSearchIndexes() throws IOException {
+        var member = member(1L);
+        MockMultipartFile file = pdfFile();
+        DocumentAsset saved = documentAsset(20L, member, DocumentParsingStatus.UPLOADED);
+        ArgumentCaptor<DocumentAsset> asset = ArgumentCaptor.forClass(DocumentAsset.class);
+        ArgumentCaptor<List<Document>> vectorDocuments = ArgumentCaptor.forClass(List.class);
+
+        given(memberService.getMember(1L)).willReturn(member);
+        given(documentParser.parsePdf(file)).willReturn("global manual text");
+        given(documentChunker.chunk("global manual text")).willReturn(List.of("global-chunk"));
+        given(localStorageService.store(eq("documents"), eq(file))).willReturn("/uploads/documents/manual.pdf");
+        given(documentAssetRepository.save(any(DocumentAsset.class))).willReturn(saved);
+
+        DocumentUploadResponse response = documentService.uploadGlobal(1L, file);
+
+        assertThat(response.id()).isEqualTo(20L);
+        assertThat(response.chunkCount()).isEqualTo(1);
+        verify(documentAssetRepository).save(asset.capture());
+        assertThat(asset.getValue().getSourceType()).isEqualTo("admin-global-upload");
+        verify(vectorStore).add(vectorDocuments.capture());
+        assertThat(vectorDocuments.getValue()).hasSize(1);
+        assertThat(vectorDocuments.getValue().get(0).getMetadata())
+                .containsEntry("memberId", "1")
+                .containsEntry("scope", "GLOBAL")
+                .containsEntry("documentId", "20")
+                .containsEntry("chunkIndex", 0);
+        verify(bm25SearchClient).indexChunks(saved, 1L, List.of("global-chunk"), "GLOBAL");
     }
 
     @Test
