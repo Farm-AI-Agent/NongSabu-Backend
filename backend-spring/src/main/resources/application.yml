@@ -75,15 +75,33 @@ app:
   rag:
     top-k: ${APP_RAG_TOP_K:4}
     similarity-threshold: ${APP_RAG_SIMILARITY_THRESHOLD:0.35}
+    hybrid-candidate-size: ${APP_RAG_HYBRID_CANDIDATE_SIZE:20}
+  llm:
+    enabled: ${APP_LLM_ENABLED:false}
   document:
     chunk-size: ${APP_DOCUMENT_CHUNK_SIZE:1200}
     chunk-overlap: ${APP_DOCUMENT_CHUNK_OVERLAP:200}
+  opensearch:
+    base-url: ${OPENSEARCH_BASE_URL:http://localhost:9200}
+    index-name: ${OPENSEARCH_INDEX_NAME:rag_chunks_v1_default}
+    connect-timeout: ${OPENSEARCH_CONNECT_TIMEOUT:3s}
+    read-timeout: ${OPENSEARCH_READ_TIMEOUT:10s}
+  reranker:
+    enabled: ${RERANKER_ENABLED:true}
+    base-url: ${RERANKER_SERVER_BASE_URL:http://localhost:8010}
+    read-timeout: ${RERANKER_READ_TIMEOUT:180s}
   storage:
     upload-dir: ${APP_STORAGE_UPLOAD_DIR:uploads}
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
   external:
     openai-api-key: ${OPENAI_API_KEY:replace-me}
     kamis-api-key: ${KAMIS_API_KEY:replace-me}
     kamis-customer-id: ${KAMIS_CUSTOMER_ID:replace-me}
+    ncpms-api-key: ${NCPMS_API_KEY:replace-me}
+    nongsaro-api-key: ${NONGSARO_API_KEY:replace-me}
+    gov-service-key: ${GOV_SERVICE_API_KEY:replace-me}
+    young-farmer-service-key: ${YOUNG_FARMER_API_KEY:replace-me}
 
 logging:
   level:

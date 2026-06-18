@@ -7,7 +7,6 @@ public record FarmResponse(
         String name,
         String location,
         String cultivationArea,
-        String cropSummary,
         String notes
 ) {
 
@@ -17,9 +16,7 @@ public record FarmResponse(
                 farm.getName(),
                 farm.getLocation(),
                 farm.getCultivationArea(),
-                farm.getCropSummary(),
                 farm.getNotes()
         );
     }
 }
-

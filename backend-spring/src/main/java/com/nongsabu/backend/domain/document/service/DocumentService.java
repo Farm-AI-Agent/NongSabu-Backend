@@ -4,16 +4,21 @@ import com.nongsabu.backend.common.exception.BusinessException;
 import com.nongsabu.backend.domain.document.dto.DocumentSummaryResponse;
 import com.nongsabu.backend.domain.document.dto.DocumentUploadResponse;
 import com.nongsabu.backend.domain.document.entity.DocumentAsset;
+import com.nongsabu.backend.domain.document.entity.DocumentChunk;
 import com.nongsabu.backend.domain.document.entity.DocumentParsingStatus;
 import com.nongsabu.backend.domain.document.repository.DocumentAssetRepository;
+import com.nongsabu.backend.domain.document.repository.DocumentChunkRepository;
 import com.nongsabu.backend.domain.member.entity.Member;
 import com.nongsabu.backend.domain.member.service.MemberService;
+import com.nongsabu.backend.infra.search.opensearch.Bm25SearchClient;
+import com.nongsabu.backend.infra.search.opensearch.OpenSearchIndexingException;
 import com.nongsabu.backend.infra.storage.LocalStorageService;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,15 +28,18 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class DocumentService {
 
     private final DocumentAssetRepository documentAssetRepository;
+    private final DocumentChunkRepository documentChunkRepository;
     private final MemberService memberService;
     private final LocalStorageService localStorageService;
     private final DocumentParser documentParser;
     private final DocumentChunker documentChunker;
     private final VectorStore vectorStore;
+    private final Bm25SearchClient bm25SearchClient;
 
     @Value("${app.embedding.model:text-embedding-3-small}")
     private String embeddingModel;
@@ -42,7 +50,9 @@ public class DocumentService {
         List<String> chunks = documentChunker.chunk(documentParser.parsePdf(file));
         DocumentAsset asset = createAsset(member, file);
 
+        documentChunkRepository.saveAll(toDocumentChunks(asset, chunks));
         vectorStore.add(toVectorDocuments(asset, memberId, chunks));
+        indexOpenSearch(asset, memberId, chunks);
         asset.updateParsingStatus(DocumentParsingStatus.PARSED);
 
         return DocumentUploadResponse.from(asset, chunks.size(), embeddingModel);
@@ -83,5 +93,26 @@ public class DocumentService {
                         )
                 ))
                 .toList();
+    }
+
+    private List<DocumentChunk> toDocumentChunks(DocumentAsset asset, List<String> chunks) {
+        return IntStream.range(0, chunks.size())
+                .mapToObj(index -> DocumentChunk.builder()
+                        .documentAsset(asset)
+                        .chunkIndex(index)
+                        .content(chunks.get(index))
+                        .build())
+                .toList();
+    }
+
+    private void indexOpenSearch(DocumentAsset asset, Long memberId, List<String> chunks) {
+        try {
+            bm25SearchClient.indexChunks(asset, memberId, chunks);
+            asset.markOpenSearchIndexed();
+        } catch (OpenSearchIndexingException exception) {
+            log.warn("OpenSearch indexing failed. documentId={}, filename={}",
+                    asset.getId(), asset.getOriginalFilename(), exception);
+            asset.markOpenSearchIndexFailed(exception.getMessage());
+        }
     }
 }

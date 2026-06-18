@@ -7,8 +7,6 @@ public record FarmRequest(
         String name,
         String location,
         String cultivationArea,
-        String cropSummary,
         String notes
 ) {
 }
-

@@ -14,7 +14,7 @@ public record FarmProfileRequest(
         @NotBlank(message = "농장 규모를 입력해주세요.")
         String farmSize,
 
-        @NotBlank(message = "주 재배 작물을 입력해주세요.")
-        String mainCrop
+        @NotNull(message = "대표 작물 ID를 입력해주세요.")
+        Long mainCropId
 ) {
 }

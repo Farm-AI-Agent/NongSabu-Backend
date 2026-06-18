@@ -2,8 +2,8 @@ package com.nongsabu.backend.domain.image.controller;
 
 import com.nongsabu.backend.common.api.ApiResponse;
 import com.nongsabu.backend.domain.image.dto.AnalysisResponse;
-import com.nongsabu.backend.domain.image.service.AnalysisProgressBroker;
 import com.nongsabu.backend.domain.image.service.ImageAnalysisService;
+import java.util.List;
 import com.nongsabu.backend.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,15 +22,20 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class ImageAnalysisController {
 
     private final ImageAnalysisService imageAnalysisService;
-    private final AnalysisProgressBroker analysisProgressBroker;
 
     @PostMapping
     public ApiResponse<AnalysisResponse> uploadAndAnalyze(
             @AuthenticationPrincipal CustomUserDetails principal,
-            @RequestParam Long farmId,
+            @RequestParam Long cropId,
             @RequestParam MultipartFile file
     ) {
-        return ApiResponse.ok("이미지 분석이 완료되었습니다.", imageAnalysisService.uploadAndAnalyze(principal.id(), farmId, file));
+        AnalysisResponse response = imageAnalysisService.uploadAndAnalyze(principal.id(), cropId, file);
+        return ApiResponse.ok(response.message(), response);
+    }
+
+    @GetMapping
+    public ApiResponse<List<AnalysisResponse>> getAnalyses(@AuthenticationPrincipal CustomUserDetails principal) {
+        return ApiResponse.ok("이미지 분석 이력 조회에 성공했습니다.", imageAnalysisService.getAnalyses(principal.id()));
     }
 
     @GetMapping("/{imageId}")
@@ -38,11 +43,15 @@ public class ImageAnalysisController {
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable Long imageId
     ) {
-        return ApiResponse.ok("이미지 분석 결과 조회에 성공했습니다.", imageAnalysisService.getAnalysis(principal.id(), imageId));
+        AnalysisResponse response = imageAnalysisService.getAnalysis(principal.id(), imageId);
+        return ApiResponse.ok(response.message(), response);
     }
 
     @GetMapping("/{imageId}/stream")
-    public SseEmitter streamProgress(@PathVariable Long imageId) {
-        return analysisProgressBroker.subscribe(imageId);
+    public SseEmitter streamProgress(
+            @AuthenticationPrincipal CustomUserDetails principal,
+            @PathVariable Long imageId
+    ) {
+        return imageAnalysisService.subscribeProgress(principal.id(), imageId);
     }
 }

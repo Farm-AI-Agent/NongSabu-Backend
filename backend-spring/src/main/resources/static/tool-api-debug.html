@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NongSabu Tool/API Debug</title>
+  <style>
+    :root {
+      --bg: #f5f7f3;
+      --panel: #fff;
+      --ink: #18241d;
+      --muted: #637167;
+      --line: #d7e0d8;
+      --brand: #276749;
+      --brand-soft: #e7f3ec;
+      --warn: #9a5b00;
+      --danger: #a33a32;
+      --mono: Consolas, "SFMono-Regular", Menlo, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, "Noto Sans KR", sans-serif;
+      line-height: 1.5;
+    }
+
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 28px auto 72px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: clamp(28px, 4vw, 42px); }
+    h2 { font-size: 19px; }
+    h3 { font-size: 15px; margin-bottom: 8px; }
+    p { color: var(--muted); margin-top: 6px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      align-items: start;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(31, 55, 39, 0.06);
+    }
+
+    .wide { grid-column: 1 / -1; }
+
+    form, .stack {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    label {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input, textarea, select, button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 10px 11px;
+      font: inherit;
+      background: #fff;
+    }
+
+    textarea {
+      min-height: 128px;
+      resize: vertical;
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    button {
+      border-color: var(--brand);
+      background: var(--brand);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    button.secondary {
+      color: var(--brand);
+      background: var(--brand-soft);
+    }
+
+    button.ghost {
+      color: var(--ink);
+      background: #fff;
+      border-color: var(--line);
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .ok { color: var(--brand); }
+    .bad { color: var(--danger); }
+    .warn { color: var(--warn); }
+
+    pre {
+      min-height: 72px;
+      max-height: 360px;
+      overflow: auto;
+      margin: 12px 0 0;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f8faf8;
+      color: #26352b;
+      font-family: var(--mono);
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .log {
+      max-height: 520px;
+      background: #111a14;
+      color: #d7f2df;
+      border-color: #111a14;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 860px) {
+      header, .grid, .row { grid-template-columns: 1fr; display: grid; }
+      .wide { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>NongSabu Tool/API Debug</h1>
+      <p>실제 프론트 연동 전에 API Key, 외부 API 연결, RAG, Tool Calling, 이미지 분석 흐름을 한 화면에서 확인합니다.</p>
+    </div>
+    <div class="pill" id="tokenPill">JWT 없음</div>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <h2>1. Auth</h2>
+      <p>테스트용 JWT를 발급해 아래 API 호출에 사용합니다.</p>
+      <form id="authForm">
+        <div class="row">
+          <label>이메일
+            <input id="email" type="email" value="tool-debug@example.com" autocomplete="username" required>
+          </label>
+          <label>비밀번호
+            <input id="password" type="password" value="password123" autocomplete="current-password" required>
+          </label>
+        </div>
+        <label>이름
+          <input id="fullName" value="Tool Debugger" required>
+        </label>
+        <div class="row">
+          <button type="button" class="secondary" id="signupButton">회원가입</button>
+          <button type="submit">로그인</button>
+        </div>
+      </form>
+      <pre id="authOutput">대기 중</pre>
+    </section>
+
+    <section class="card">
+      <h2>2. Integration Status</h2>
+      <p>API Key는 마스킹된 상태로만 표시됩니다.</p>
+      <div class="row stack">
+        <button id="loadStatusButton">상태 조회</button>
+        <button class="secondary" id="loadSamplesButton">Tool 샘플 로드</button>
+      </div>
+      <div class="pill-row" id="keyPills"></div>
+      <pre id="statusOutput">대기 중</pre>
+    </section>
+
+    <section class="card">
+      <h2>3. Connectivity Probe</h2>
+      <p>Spring Boot가 내부 서비스에 접근 가능한지 확인합니다.</p>
+      <div class="row stack">
+        <button data-probe="fastapi">FastAPI Health</button>
+        <button data-probe="opensearch">OpenSearch</button>
+        <button data-probe="reranker">Reranker Health</button>
+        <button data-probe="kamis">KAMIS Smoke</button>
+        <button data-probe="ncpms">NCPMS Smoke</button>
+        <button data-probe="nongsaro">Nongsaro Smoke</button>
+        <button data-probe="gov-service">Gov Service Smoke</button>
+        <button data-probe="young-farmer">Young Farmer Smoke</button>
+      </div>
+      <pre id="probeOutput">대기 중</pre>
+    </section>
+
+    <section class="card">
+      <h2>4. RAG Quick Test</h2>
+      <p>문서 업로드 없이도 기존 인덱스 상태를 확인할 수 있습니다.</p>
+      <form id="ragForm">
+        <div class="row">
+          <label>검색 모드
+            <select id="ragMode">
+              <option value="hybrid">hybrid</option>
+              <option value="hybrid-rerank">hybrid-rerank</option>
+              <option value="vector">vector</option>
+              <option value="bm25">bm25</option>
+            </select>
+          </label>
+          <label>Top K
+            <input id="ragTopK" type="number" min="1" max="20" value="4">
+          </label>
+        </div>
+        <label>질문
+          <textarea id="ragQuestion">업로드한 문서를 바탕으로 포도 병해 관리 방법을 알려줘.</textarea>
+        </label>
+        <div class="row">
+          <button type="submit" data-rag-action="ask">RAG Ask</button>
+          <button type="submit" class="secondary" data-rag-action="search">RAG Search</button>
+        </div>
+      </form>
+      <pre id="ragOutput">대기 중</pre>
+    </section>
+
+    <section class="card wide">
+      <h2>5. Tool Calling Debug</h2>
+      <p>`/api/v1/debug/tools/invoke`로 실제 백엔드 Tool wrapper가 동작하는지 확인합니다.</p>
+      <form id="toolForm">
+        <div class="row">
+          <label>Tool
+            <select id="toolSelect">
+              <option value="rag_ask">rag_ask</option>
+              <option value="rag_search">rag_search</option>
+              <option value="kamis_market_snapshot">kamis_market_snapshot</option>
+              <option value="llm_generate">llm_generate</option>
+              <option value="mcp_stub">mcp_stub</option>
+            </select>
+          </label>
+          <label>샘플
+            <select id="sampleSelect">
+              <option value="">샘플을 먼저 로드하세요</option>
+            </select>
+          </label>
+        </div>
+        <label>Request JSON
+          <textarea id="toolPayload">{
+  "toolName": "rag_ask",
+  "query": "포도 병해 관리 방법을 알려줘.",
+  "topK": 4,
+  "retrievalMode": "hybrid"
+}</textarea>
+        </label>
+        <button type="submit">Tool Invoke</button>
+      </form>
+      <pre id="toolOutput">대기 중</pre>
+    </section>
+
+    <section class="card wide">
+      <h2>6. Image Analysis Flow</h2>
+      <p>프론트 병해충 페이지를 흉내 내서 작물 조회, 이미지 분석, SSE, 리포트 생성을 테스트합니다.</p>
+      <form id="imageForm">
+        <div class="row">
+          <label>작물
+            <select id="cropSelect">
+              <option value="">작물 목록을 먼저 불러오세요</option>
+            </select>
+          </label>
+          <label>이미지
+            <input id="imageFile" type="file" accept="image/*">
+          </label>
+        </div>
+        <div class="row">
+          <button type="button" class="secondary" id="loadCropsButton">작물 목록 조회</button>
+          <button type="submit">이미지 분석 요청</button>
+        </div>
+      </form>
+      <div class="row stack">
+        <label>Image ID
+          <input id="imageId" placeholder="분석 후 자동 입력">
+        </label>
+        <div class="row">
+          <button class="ghost" id="getImageButton">분석 결과 조회</button>
+          <button class="secondary" id="reportButton">리포트 생성</button>
+        </div>
+      </div>
+      <pre id="imageOutput">대기 중</pre>
+    </section>
+
+    <section class="card wide">
+      <h2>Debug Log</h2>
+      <p>요청 endpoint, latency, 실패 메시지를 시간순으로 남깁니다.</p>
+      <pre id="debugLog" class="log">ready</pre>
+    </section>
+  </div>
+</main>
+
+<script>
+  const tokenKey = "nongsabu-tool-debug-token";
+  let samples = {};
+
+  const $ = selector => document.querySelector(selector);
+
+  function token() {
+    return localStorage.getItem(tokenKey) || "";
+  }
+
+  function updateTokenPill() {
+    $("#tokenPill").textContent = token() ? "JWT 저장됨" : "JWT 없음";
+    $("#tokenPill").className = `pill ${token() ? "ok" : "bad"}`;
+  }
+
+  function pretty(value) {
+    return JSON.stringify(value, null, 2);
+  }
+
+  function setOutput(selector, value) {
+    $(selector).textContent = typeof value === "string" ? value : pretty(value);
+  }
+
+  function log(message, data) {
+    const line = `[${new Date().toLocaleTimeString()}] ${message}`;
+    const suffix = data === undefined ? "" : `\n${typeof data === "string" ? data : pretty(data)}`;
+    $("#debugLog").textContent = `${line}${suffix}\n\n${$("#debugLog").textContent}`;
+  }
+
+  async function api(path, options = {}) {
+    const started = performance.now();
+    const headers = new Headers(options.headers || {});
+    if (token()) headers.set("Authorization", `Bearer ${token()}`);
+    const response = await fetch(path, {...options, headers});
+    const elapsed = Math.round(performance.now() - started);
+    const body = await response.json().catch(() => ({}));
+    log(`${options.method || "GET"} ${path} -> HTTP ${response.status} (${elapsed}ms)`, body);
+    if (!response.ok || body.success === false) {
+      throw new Error(body.message || `HTTP ${response.status}`);
+    }
+    return body.data;
+  }
+
+  async function jsonApi(path, payload) {
+    return api(path, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload)
+    });
+  }
+
+  $("#signupButton").addEventListener("click", async event => {
+    event.target.disabled = true;
+    try {
+      const data = await jsonApi("/api/v1/auth/signup", {
+        email: $("#email").value,
+        password: $("#password").value,
+        name: $("#fullName").value
+      });
+      setOutput("#authOutput", data || "회원가입 완료");
+    } catch (error) {
+      setOutput("#authOutput", error.message);
+    } finally {
+      event.target.disabled = false;
+    }
+  });
+
+  $("#authForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    event.submitter.disabled = true;
+    try {
+      const data = await jsonApi("/api/v1/auth/login", {
+        email: $("#email").value,
+        password: $("#password").value
+      });
+      localStorage.setItem(tokenKey, data.accessToken);
+      updateTokenPill();
+      setOutput("#authOutput", {...data, accessToken: `${data.accessToken.slice(0, 16)}...`});
+    } catch (error) {
+      setOutput("#authOutput", error.message);
+    } finally {
+      event.submitter.disabled = false;
+    }
+  });
+
+  $("#loadStatusButton").addEventListener("click", async event => {
+    event.target.disabled = true;
+    try {
+      const data = await api("/api/v1/debug/integrations/status");
+      setOutput("#statusOutput", data);
+      const keyPills = $("#keyPills");
+      keyPills.replaceChildren(...data.apiKeys.map(item => {
+        const node = document.createElement("span");
+        node.className = `pill ${item.configured ? "ok" : "bad"}`;
+        node.textContent = `${item.name}: ${item.configured ? "configured" : "missing"}`;
+        return node;
+      }));
+    } catch (error) {
+      setOutput("#statusOutput", error.message);
+    } finally {
+      event.target.disabled = false;
+    }
+  });
+
+  $("#loadSamplesButton").addEventListener("click", async event => {
+    event.target.disabled = true;
+    try {
+      samples = await api("/api/v1/debug/tools/samples");
+      const sampleSelect = $("#sampleSelect");
+      sampleSelect.replaceChildren(new Option("샘플 선택", ""));
+      Object.keys(samples).forEach(name => sampleSelect.append(new Option(name, name)));
+      setOutput("#statusOutput", samples);
+    } catch (error) {
+      setOutput("#statusOutput", error.message);
+    } finally {
+      event.target.disabled = false;
+    }
+  });
+
+  document.querySelectorAll("[data-probe]").forEach(button => {
+    button.addEventListener("click", async event => {
+      event.target.disabled = true;
+      try {
+        setOutput("#probeOutput", await api(`/api/v1/debug/integrations/probe/${event.target.dataset.probe}`));
+      } catch (error) {
+        setOutput("#probeOutput", error.message);
+      } finally {
+        event.target.disabled = false;
+      }
+    });
+  });
+
+  $("#ragForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const action = event.submitter.dataset.ragAction;
+    event.submitter.disabled = true;
+    try {
+      const payload = {
+        topK: Number($("#ragTopK").value),
+        retrievalMode: $("#ragMode").value
+      };
+      const data = action === "ask"
+        ? await jsonApi("/api/v1/rag/ask", {...payload, question: $("#ragQuestion").value})
+        : await jsonApi("/api/v1/rag/search", {...payload, query: $("#ragQuestion").value});
+      setOutput("#ragOutput", data);
+    } catch (error) {
+      setOutput("#ragOutput", error.message);
+    } finally {
+      event.submitter.disabled = false;
+    }
+  });
+
+  $("#toolSelect").addEventListener("change", event => {
+    const selected = event.target.value;
+    if (samples[selected]) {
+      $("#toolPayload").value = pretty(samples[selected]);
+    } else {
+      const payload = JSON.parse($("#toolPayload").value || "{}");
+      payload.toolName = selected;
+      $("#toolPayload").value = pretty(payload);
+    }
+  });
+
+  $("#sampleSelect").addEventListener("change", event => {
+    const sample = samples[event.target.value];
+    if (!sample) return;
+    $("#toolSelect").value = sample.toolName || event.target.value;
+    $("#toolPayload").value = pretty(sample);
+  });
+
+  $("#toolForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    event.submitter.disabled = true;
+    try {
+      const payload = JSON.parse($("#toolPayload").value);
+      setOutput("#toolOutput", await jsonApi("/api/v1/debug/tools/invoke", payload));
+    } catch (error) {
+      setOutput("#toolOutput", error.message);
+    } finally {
+      event.submitter.disabled = false;
+    }
+  });
+
+  $("#loadCropsButton").addEventListener("click", async event => {
+    event.target.disabled = true;
+    try {
+      const crops = await api("/api/v1/crops");
+      const cropSelect = $("#cropSelect");
+      cropSelect.replaceChildren(new Option("작물 선택", ""));
+      crops.forEach(crop => cropSelect.append(new Option(`${crop.name} (#${crop.id})`, crop.id)));
+      const grape = crops.find(crop => crop.name === "포도");
+      if (grape) cropSelect.value = grape.id;
+      setOutput("#imageOutput", crops);
+    } catch (error) {
+      setOutput("#imageOutput", error.message);
+    } finally {
+      event.target.disabled = false;
+    }
+  });
+
+  $("#imageForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    event.submitter.disabled = true;
+    try {
+      const file = $("#imageFile").files[0];
+      if (!file) throw new Error("이미지를 선택하세요.");
+      if (!$("#cropSelect").value) throw new Error("작물을 선택하세요.");
+      const formData = new FormData();
+      formData.append("cropId", $("#cropSelect").value);
+      formData.append("file", file);
+      const data = await api("/api/v1/analysis/images", {method: "POST", body: formData});
+      $("#imageId").value = data.imageId;
+      setOutput("#imageOutput", data);
+      readSse(data.imageId);
+    } catch (error) {
+      setOutput("#imageOutput", error.message);
+    } finally {
+      event.submitter.disabled = false;
+    }
+  });
+
+  async function readSse(imageId) {
+    if (!token()) return;
+    try {
+      const response = await fetch(`/api/v1/analysis/images/${imageId}/stream`, {
+        headers: {"Authorization": `Bearer ${token()}`}
+      });
+      if (!response.ok || !response.body) {
+        log(`SSE ${imageId} failed`, `HTTP ${response.status}`);
+        return;
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let chunks = "";
+      while (true) {
+        const {value, done} = await reader.read();
+        if (done) break;
+        chunks += decoder.decode(value, {stream: true});
+        log(`SSE ${imageId}`, chunks);
+        if (chunks.includes("COMPLETED") || chunks.includes("FAILED") || chunks.includes("UNSUPPORTED")) {
+          reader.cancel();
+          break;
+        }
+      }
+    } catch (error) {
+      log(`SSE ${imageId} error`, error.message);
+    }
+  }
+
+  $("#getImageButton").addEventListener("click", async event => {
+    event.target.disabled = true;
+    try {
+      if (!$("#imageId").value) throw new Error("imageId가 필요합니다.");
+      setOutput("#imageOutput", await api(`/api/v1/analysis/images/${$("#imageId").value}`));
+    } catch (error) {
+      setOutput("#imageOutput", error.message);
+    } finally {
+      event.target.disabled = false;
+    }
+  });
+
+  $("#reportButton").addEventListener("click", async event => {
+    event.target.disabled = true;
+    try {
+      if (!$("#imageId").value) throw new Error("imageId가 필요합니다.");
+      setOutput("#imageOutput", await api(`/api/v1/reports/images/${$("#imageId").value}`, {method: "POST"}));
+    } catch (error) {
+      setOutput("#imageOutput", error.message);
+    } finally {
+      event.target.disabled = false;
+    }
+  });
+
+  updateTokenPill();
+</script>
+</body>
+</html>

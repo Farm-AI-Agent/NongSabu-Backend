@@ -12,6 +12,11 @@ RAGChecker 입력 JSON을 만든다.
 docker compose up --build -d
 ```
 
+RAG 업로드와 검색은 OpenAI embedding을 사용하므로 프로젝트 루트의 `.env`에
+`OPENAI_API_KEY`가 필요하다. 답변 생성까지 LLM으로 검증하려면
+`APP_LLM_ENABLED=true`를 추가하고, 로컬 검색 흐름만 확인하려면 기본값
+`false`를 유지해도 된다.
+
 평가 스크립트 의존성을 설치하고 실행한다.
 
 ```powershell

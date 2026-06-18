@@ -1,6 +1,5 @@
 package com.nongsabu.backend.domain.farm.service;
 
-import java.util.List;
 import com.nongsabu.backend.common.exception.BusinessException;
 import com.nongsabu.backend.domain.farm.dto.FarmRequest;
 import com.nongsabu.backend.domain.farm.dto.FarmResponse;
@@ -8,6 +7,7 @@ import com.nongsabu.backend.domain.farm.entity.Farm;
 import com.nongsabu.backend.domain.farm.repository.FarmRepository;
 import com.nongsabu.backend.domain.member.entity.Member;
 import com.nongsabu.backend.domain.member.service.MemberService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,7 +28,6 @@ public class FarmService {
                 .name(request.name())
                 .location(request.location())
                 .cultivationArea(request.cultivationArea())
-                .cropSummary(request.cropSummary())
                 .notes(request.notes())
                 .build());
         return FarmResponse.from(farm);
@@ -40,6 +39,12 @@ public class FarmService {
     }
 
     @Transactional(readOnly = true)
+    public FarmResponse getPrimaryFarm(Long memberId) {
+        return FarmResponse.from(farmRepository.findFirstByMemberIdOrderByIdAsc(memberId)
+                .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND, "등록된 농장을 찾을 수 없습니다.")));
+    }
+
+    @Transactional(readOnly = true)
     public FarmResponse getFarm(Long memberId, Long farmId) {
         return FarmResponse.from(getOwnedFarm(memberId, farmId));
     }
@@ -47,8 +52,18 @@ public class FarmService {
     @Transactional
     public FarmResponse updateFarm(Long memberId, Long farmId, FarmRequest request) {
         Farm farm = getOwnedFarm(memberId, farmId);
-        farm.update(request.name(), request.location(), request.cultivationArea(), request.cropSummary(), request.notes());
+        farm.update(request.name(), request.location(), request.cultivationArea(), request.notes());
         return FarmResponse.from(farm);
+    }
+
+    @Transactional
+    public FarmResponse upsertPrimaryFarm(Long memberId, FarmRequest request) {
+        return farmRepository.findFirstByMemberIdOrderByIdAsc(memberId)
+                .map(farm -> {
+                    farm.update(request.name(), request.location(), request.cultivationArea(), request.notes());
+                    return FarmResponse.from(farm);
+                })
+                .orElseGet(() -> createFarm(memberId, request));
     }
 
     @Transactional(readOnly = true)

@@ -117,4 +117,15 @@ class AuthServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.INVALID_CREDENTIALS.getMessage());
     }
+
+    @Test
+    @DisplayName("login fails when email does not exist")
+    void loginFailWhenEmailDoesNotExist() {
+        LoginRequest request = new LoginRequest("missing@example.com", "password1234");
+        given(memberRepository.findByEmail(request.email())).willReturn(java.util.Optional.empty());
+
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.INVALID_CREDENTIALS.getMessage());
+    }
 }
