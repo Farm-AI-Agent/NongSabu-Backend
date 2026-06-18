@@ -1,0 +1,41 @@
+[project]
+name = "nongsabu-ai-server"
+version = "0.1.0"
+description = "NongSabu AI server - grape disease inference (mock now, YOLO26 ONNX later)"
+readme = "README.md"
+requires-python = ">=3.13"
+# 실행(목업) 런타임은 가볍게 유지 — 현재는 사전정의 결과를 반환하는 목업이 동작한다.
+dependencies = [
+    "fastapi>=0.115.4",
+    "uvicorn[standard]>=0.32.0",
+    "python-multipart>=0.0.12",
+    "pydantic>=2.9.2",
+    "pydantic-settings>=2.6.0",
+    "pillow>=11.0.0",
+]
+
+[dependency-groups]
+# ONNX 추론용 의존성(CPU). 모델 학습/변환 완료 후 추론 코드 주석을 해제할 때 설치:
+#   uv sync --group inference
+# GPU 도 쓰려면: onnxruntime 대신 onnxruntime-gpu 로 교체 + CUDA/cuDNN 런타임 필요
+#   (engine 은 AI_DEVICE=auto 시 CUDA 가능하면 GPU, 아니면 CPU 로 자동 폴백)
+inference = [
+    "numpy>=2.1.0",
+    "onnxruntime>=1.20.0",
+]
+# .pt -> .onnx 변환 도구(로컬에서 변환할 때만): uv sync --group export
+export = [
+    "ultralytics>=8.3.0",
+]
+dev = [
+    "pytest>=8.3.0",
+    "httpx>=0.27.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.uv]
+# 기본 sync 시 inference/export 그룹은 제외(목업 실행은 슬림 유지)
+default-groups = []

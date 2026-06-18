@@ -1,0 +1,7 @@
+{
+  "_comment": "모델 클래스 인덱스 순서와 일치해야 함 (yolo26-grape.onnx: 0=노균병, 1=탄저병).",
+  "classes": [
+    { "name": "downy_mildew", "name_ko": "노균병", "severity": "HIGH" },
+    { "name": "anthracnose", "name_ko": "탄저병", "severity": "MEDIUM" }
+  ]
+}

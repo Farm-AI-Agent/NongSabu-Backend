@@ -8,16 +8,22 @@ backend-spring/build/
 backend-spring/bin/
 backend-spring/uploads/
 ai-server/.venv/
-ai-server/__pycache__/
 ai-server/.pytest_cache/
 ai-server/uploads/
+# Python 바이트코드/캐시(중첩 포함)
 **/__pycache__/
 **/.pytest_cache/
 *.py[cod]
 *$py.class
 *.pyc.*
 gpt-docs/
-.env
-
-context_*.txt
-*.log
+# 모델 가중치는 커밋하지 않음(용량). models/ 폴더와 labels.json/README 는 추적.
+ai-server/models/*.onnx
+ai-server/models/*.pt
+ai-server/*.onnx
+ai-server/labels.json
+# 검증 산출물 / 테스트 데이터(로컬 유지, 커밋 안 함)
+ai-server/debug/
+ai-server/test_results/
+ai-server/*.jpg
+ai-server/*.txt

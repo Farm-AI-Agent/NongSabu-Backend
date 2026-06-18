@@ -1,0 +1,38 @@
+# =============================================================================
+# GPU 전용 이미지 (로컬 전용 · git 미추적 / .gitignore 등록됨)
+# 노트북 등 CUDA 가능 환경에서만 사용. ai-server 정식 배포는 CPU(Dockerfile).
+#
+# 빌드:  docker build -f Dockerfile.gpu -t nongsabu-ai-server:gpu .
+# 실행:  docker run --gpus all -p 8000:8000 -e AI_DEVICE=auto nongsabu-ai-server:gpu
+#
+# 전제: 호스트에 NVIDIA 드라이버 + nvidia-container-toolkit 설치.
+# CUDA 버전은 본인 환경/onnxruntime-gpu 요구사항에 맞게 베이스 태그를 조정할 것.
+# (실모델 추론은 disease_predictor.py 의 ONNX 코드 주석 해제 후 동작)
+# =============================================================================
+FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04 AS base
+
+# uv 바이너리 복사
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
+ENV UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1 \
+    UV_PYTHON_DOWNLOADS=automatic \
+    PATH="/app/.venv/bin:$PATH" \
+    AI_DEVICE=auto
+
+WORKDIR /app
+
+# 1) 의존성(추론 그룹 포함). uv 가 Python 3.13 을 자동 조달.
+COPY pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project --no-dev --group inference
+
+# 2) 소스 + 프로젝트 설치, onnxruntime(CPU) → onnxruntime-gpu 로 교체
+COPY app ./app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --group inference \
+ && uv pip uninstall onnxruntime \
+ && uv pip install onnxruntime-gpu
+
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

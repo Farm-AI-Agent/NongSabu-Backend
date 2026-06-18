@@ -1,0 +1,7 @@
+{
+  "_comment": "YOLO 탐지 모델의 클래스 인덱스 순서와 정확히 일치해야 함. '정상'은 클래스가 아니라 '탐지 0건'으로 처리. severity 는 도메인 기본값(LOW/MEDIUM/HIGH).",
+  "classes": [
+    { "name": "downy_mildew", "name_ko": "노균병", "severity": "HIGH" },
+    { "name": "anthracnose", "name_ko": "탄저병", "severity": "MEDIUM" }
+  ]
+}
