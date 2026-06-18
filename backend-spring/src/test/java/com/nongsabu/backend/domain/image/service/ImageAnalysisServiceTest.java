@@ -143,6 +143,7 @@ class ImageAnalysisServiceTest {
         assertThat(response.detections()).hasSize(1);
         assertThat(response.detections().get(0).className()).isEqualTo("downy_mildew");
         assertThat(response.detections().get(0).label()).isEqualTo("\uB178\uADE0\uBCD1");
+        assertThat(response.detections().get(0).confidencePercent()).isEqualTo(91.0);
         assertThat(response.detections().get(0).bbox()).containsExactly(120.0, 80.0, 64.0, 70.0);
     }
 

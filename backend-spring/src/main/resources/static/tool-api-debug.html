@@ -176,6 +176,49 @@
       font-size: 12px;
     }
 
+    .analysis-preview {
+      position: relative;
+      display: none;
+      width: fit-content;
+      max-width: 100%;
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #0f1711;
+    }
+
+    .analysis-preview img {
+      display: block;
+      max-width: min(100%, 860px);
+      max-height: 560px;
+      width: auto;
+      height: auto;
+    }
+
+    .detection-box {
+      position: absolute;
+      border: 2px solid #ffcf33;
+      background: rgba(255, 207, 51, 0.08);
+      pointer-events: none;
+    }
+
+    .detection-tag {
+      position: absolute;
+      left: -2px;
+      top: -28px;
+      max-width: min(260px, 80vw);
+      padding: 4px 7px;
+      border-radius: 6px 6px 6px 0;
+      background: #ffcf33;
+      color: #18241d;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     @media (max-width: 860px) {
       header, .grid, .row { grid-template-columns: 1fr; display: grid; }
       .wide { grid-column: auto; }
@@ -323,6 +366,9 @@
           <button type="submit">이미지 분석 요청</button>
         </div>
       </form>
+      <div class="analysis-preview" id="analysisPreview">
+        <img id="analysisPreviewImage" alt="analysis preview">
+      </div>
       <div class="row stack">
         <label>Image ID
           <input id="imageId" placeholder="분석 후 자동 입력">
@@ -346,6 +392,7 @@
 <script>
   const tokenKey = "nongsabu-tool-debug-token";
   let samples = {};
+  let selectedPreviewUrl = "";
 
   const $ = selector => document.querySelector(selector);
 
@@ -370,6 +417,43 @@
     const line = `[${new Date().toLocaleTimeString()}] ${message}`;
     const suffix = data === undefined ? "" : `\n${typeof data === "string" ? data : pretty(data)}`;
     $("#debugLog").textContent = `${line}${suffix}\n\n${$("#debugLog").textContent}`;
+  }
+
+  function setImagePreview(file) {
+    if (selectedPreviewUrl) URL.revokeObjectURL(selectedPreviewUrl);
+    selectedPreviewUrl = file ? URL.createObjectURL(file) : "";
+    const preview = $("#analysisPreview");
+    const image = $("#analysisPreviewImage");
+    preview.querySelectorAll(".detection-box").forEach(node => node.remove());
+    image.src = selectedPreviewUrl;
+    preview.style.display = file ? "block" : "none";
+  }
+
+  function renderDetections(result) {
+    const preview = $("#analysisPreview");
+    const image = $("#analysisPreviewImage");
+    preview.querySelectorAll(".detection-box").forEach(node => node.remove());
+    if (!result || !image.complete || !result.imageSize || !result.detections?.length) return;
+
+    const scaleX = image.clientWidth / result.imageSize.width;
+    const scaleY = image.clientHeight / result.imageSize.height;
+    result.detections.forEach(detection => {
+      const [x, y, width, height] = detection.bbox || [];
+      if ([x, y, width, height].some(value => typeof value !== "number")) return;
+      const box = document.createElement("div");
+      box.className = "detection-box";
+      box.style.left = `${x * scaleX}px`;
+      box.style.top = `${y * scaleY}px`;
+      box.style.width = `${width * scaleX}px`;
+      box.style.height = `${height * scaleY}px`;
+
+      const confidence = detection.confidence_percent ?? Math.round((detection.confidence || 0) * 1000) / 10;
+      const tag = document.createElement("div");
+      tag.className = "detection-tag";
+      tag.textContent = `${detection.label || detection.class_name} ${confidence}%`;
+      box.appendChild(tag);
+      preview.appendChild(box);
+    });
   }
 
   async function api(path, options = {}) {
@@ -543,6 +627,10 @@
     }
   });
 
+  $("#imageFile").addEventListener("change", event => {
+    setImagePreview(event.target.files[0] || null);
+  });
+
   $("#imageForm").addEventListener("submit", async event => {
     event.preventDefault();
     event.submitter.disabled = true;
@@ -556,6 +644,11 @@
       const data = await api("/api/v1/analysis/images", {method: "POST", body: formData});
       $("#imageId").value = data.imageId;
       setOutput("#imageOutput", data);
+      if ($("#analysisPreviewImage").complete) {
+        renderDetections(data);
+      } else {
+        $("#analysisPreviewImage").onload = () => renderDetections(data);
+      }
       readSse(data.imageId);
     } catch (error) {
       setOutput("#imageOutput", error.message);
@@ -596,7 +689,9 @@
     event.target.disabled = true;
     try {
       if (!$("#imageId").value) throw new Error("imageId가 필요합니다.");
-      setOutput("#imageOutput", await api(`/api/v1/analysis/images/${$("#imageId").value}`));
+      const data = await api(`/api/v1/analysis/images/${$("#imageId").value}`);
+      setOutput("#imageOutput", data);
+      renderDetections(data);
     } catch (error) {
       setOutput("#imageOutput", error.message);
     } finally {

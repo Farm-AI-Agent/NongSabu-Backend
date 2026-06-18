@@ -28,6 +28,10 @@ class DiseasePredictor(Protocol):
     def predict_sync(self, file_bytes: bytes, filename: str | None) -> AnalysisResponse: ...
 
 
+def _confidence_percent(confidence: float) -> float:
+    return round(confidence * 100.0, 1)
+
+
 def _load_labels(settings: Settings) -> list[dict]:
     if not settings.labels_path or not Path(settings.labels_path).is_file():
         return []
@@ -75,7 +79,13 @@ class OnnxDiseasePredictor:
         meta: list[tuple[str, float, str]] = []  # 집계용 (label_ko, conf, severity)
         for class_id, conf, bbox in self._engine.infer(image):  # bbox=[x,y,w,h] 원본 좌표
             name, label_ko, severity = self._label(class_id)
-            dets.append(Detection(class_name=name, label=label_ko, confidence=conf, bbox=bbox))
+            dets.append(Detection(
+                class_name=name,
+                label=label_ko,
+                confidence=conf,
+                confidence_percent=_confidence_percent(conf),
+                bbox=bbox,
+            ))
             meta.append((label_ko, conf, severity))
 
         order = sorted(range(len(meta)), key=lambda i: meta[i][1], reverse=True)

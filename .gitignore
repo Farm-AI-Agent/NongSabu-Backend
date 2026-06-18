@@ -21,6 +21,7 @@ ai-server/uploads/
 *.pyc.*
 gpt-docs/
 # 모델 가중치는 커밋하지 않음(용량). models/ 폴더와 labels.json/README 는 추적.
+*.onnx
 ai-server/models/*.onnx
 ai-server/models/*.pt
 ai-server/*.onnx

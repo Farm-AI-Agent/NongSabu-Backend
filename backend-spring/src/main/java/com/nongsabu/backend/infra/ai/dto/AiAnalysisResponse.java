@@ -50,7 +50,17 @@ public record AiAnalysisResponse(
             String className,
             String label,
             double confidence,
+            @JsonProperty("confidence_percent")
+            Double confidencePercent,
             List<Double> bbox
     ) {
+
+        public Detection(String className, String label, double confidence, List<Double> bbox) {
+            this(className, label, confidence, roundConfidencePercent(confidence), bbox);
+        }
+
+        private static double roundConfidencePercent(double confidence) {
+            return Math.round(confidence * 1000.0) / 10.0;
+        }
     }
 }

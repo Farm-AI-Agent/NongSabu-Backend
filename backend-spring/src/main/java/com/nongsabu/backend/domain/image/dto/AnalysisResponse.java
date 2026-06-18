@@ -111,8 +111,20 @@ public record AnalysisResponse(
             String className,
             String label,
             double confidence,
+            @JsonProperty("confidence_percent")
+            Double confidencePercent,
             List<Double> bbox
     ) {
+
+        public DetectionResponse {
+            if (confidencePercent == null) {
+                confidencePercent = roundConfidencePercent(confidence);
+            }
+        }
+
+        private static double roundConfidencePercent(double confidence) {
+            return Math.round(confidence * 1000.0) / 10.0;
+        }
     }
 
     private record RawAnalysisPayload(

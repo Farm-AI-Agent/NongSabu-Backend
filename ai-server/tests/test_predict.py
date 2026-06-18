@@ -29,4 +29,5 @@ def test_detections_shape_for_client_drawing(client, image_bytes):
     for det in body["detections"]:
         assert det["class_name"] and det["label"]
         assert 0.0 <= det["confidence"] <= 1.0
+        assert det["confidence_percent"] == round(det["confidence"] * 100.0, 1)
         assert len(det["bbox"]) == 4  # [x, y, width, height] (원본 좌표계)

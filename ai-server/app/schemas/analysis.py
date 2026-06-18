@@ -11,6 +11,7 @@ class Detection(BaseModel):
     class_name: str  # 영문 클래스 id (예: "downy_mildew")
     label: str       # 표시용 한글명 (예: "노균병")
     confidence: float = Field(..., ge=0.0, le=1.0)
+    confidence_percent: float = Field(0.0, ge=0.0, le=100.0)
     bbox: list[float] = Field(..., min_length=4, max_length=4)
 
 
