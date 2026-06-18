@@ -10,12 +10,13 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_prefix="AI_", extra="ignore")
 
     # ── 모델 ────────────────────────────────────────────────
-    # 변환이 끝난 .onnx 파일 경로. 비어있거나 파일이 없으면 더미 추론기로 폴백한다.
-    model_path: str | None = None
-    model_version: str = "yolo26-grape-onnx-v0"
+    # .onnx 모델 경로(기본값=이미지에 구운 표준 경로). 비밀이 아니므로 .env 없이 기본값으로 동작.
+    # 다른 모델로 교체 시에만 AI_MODEL_PATH 로 오버라이드(또는 볼륨 마운트).
+    model_path: str | None = "models/yolo26-grape.onnx"
+    model_version: str = "yolo26-grape-onnx-v1"
 
     # 클래스 라벨 정의 파일(JSON). 형식은 labels.example.json 참고.
-    labels_path: str | None = None
+    labels_path: str | None = "models/labels.json"
 
     # ── 추론 파라미터 ──────────────────────────────────────
     input_size: int = 640          # 정사각 입력 (letterbox)

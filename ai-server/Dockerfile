@@ -27,5 +27,9 @@ COPY app ./app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --group inference
 
+# 3) 모델 가중치/라벨을 이미지에 포함(bake). 교체는 재빌드(또는 볼륨 마운트로 오버라이드).
+#    빌드 시 ai-server/models/ 에 해당 파일이 있어야 함(모델은 git 미포함).
+COPY models/yolo26-grape.onnx models/labels.json ./models/
+
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

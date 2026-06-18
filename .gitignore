@@ -13,8 +13,10 @@ ai-server/uploads/
 # Python 바이트코드(중첩 포함)
 **/__pycache__/
 *.py[cod]
-# ONNX 모델 가중치 / 로컬 라벨 파일은 커밋하지 않음
-ai-server/models/
+# 모델 가중치는 커밋하지 않음(용량). models/ 폴더와 labels.json/README 는 추적.
+#   → 팀원은 onnx 만 받아 ai-server/models/ 에 넣으면 됨(labels.json 은 이미 git 포함).
+ai-server/models/*.onnx
+ai-server/models/*.pt
 ai-server/*.onnx
 ai-server/labels.json
 # 검증 산출물 / 테스트 데이터(로컬 유지, 커밋 안 함)
